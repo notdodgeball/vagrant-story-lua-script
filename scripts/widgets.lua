@@ -1,3 +1,8 @@
+--========================================================
+-- Vagrant Story script for the pcsx-redux emulator
+-- made by optrin
+--========================================================
+
 function dec2hex( num )
   return ("%X"):format(math.abs(num))
 end
