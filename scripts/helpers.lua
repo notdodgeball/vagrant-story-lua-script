@@ -1,14 +1,5 @@
--- PCSX.getMemPtr() only returns uint8
--- PCSX.getMemPtr()[0x11db0] = 0x22
--- local a2 = regs.GPR.n.a2
-
--- if imgui.IsItemHovered() and imgui.BeginTooltip() then imgui.TextUnformatted('debug  00FA\nending 003C\nboss 011B'); imgui.EndTooltip(); end
-
--- addBpWithCondition(PCSX.getMemPtr(),0x8011FA10, 4, 'dd', 1)
--- addBpWithCondition(PCSX.getMemPtr(),0x8011FA12, 4, 'dsd', 1)
-
-lastInput = 0
-input_t = {}
+local lastInput = 0
+local input_t = {}
 input_t[0x0001] = 'L2';       input_t[0x0002] = 'R2'
 input_t[0x0004] = 'L1';       input_t[0x0008] = 'R1'
 input_t[0x0010] = 'Triangle'; input_t[0x0020] = 'Circle'
