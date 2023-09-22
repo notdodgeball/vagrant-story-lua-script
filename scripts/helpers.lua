@@ -1,3 +1,8 @@
+--========================================================
+-- Vagrant Story script for the pcsx-redux emulator
+-- made by optrin
+--========================================================
+
 local lastInput = 0
 local input_t = {}
 input_t[0x0001] = 'L2';       input_t[0x0002] = 'R2'
