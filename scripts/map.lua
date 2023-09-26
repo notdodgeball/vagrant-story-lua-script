@@ -1,7 +1,4 @@
---========================================================
 -- Area, zone and room info from Datacrystal
--- made by optrin
---========================================================
 
 area_t = {}
 area_t[1] = "Unmapped";               area_t[2] = "Wine Cellar"

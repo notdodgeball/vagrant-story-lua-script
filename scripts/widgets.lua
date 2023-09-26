@@ -1,8 +1,3 @@
---========================================================
--- Vagrant Story script for the pcsx-redux emulator
--- made by optrin
---========================================================
-
 function dec2hex( num )
   return ("%X"):format(math.abs(num))
 end
@@ -64,7 +59,7 @@ function drawRadio(mem, address, name )
   imgui.NewLine()
   for i = 0,15,1 do
     imgui.SameLine();
-  imgui.RadioButton(dec2hex(i), nibble == i)
+    imgui.RadioButton(dec2hex(i), nibble == i)
   end
-
+  
 end
