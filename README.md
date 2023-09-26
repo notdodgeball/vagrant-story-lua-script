@@ -14,3 +14,5 @@ widgets.lua implements a few gui functions
 helpers.lua implements these two, manly as a showcase what can be done
 * addBpWithCondition
 * inputLogger
+
+[![Showcase video](http://i3.ytimg.com/vi/Wyxv00NZJdc/hqdefault.jpg)](https://youtu.be/Wyxv00NZJdc)
