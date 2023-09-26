@@ -28,8 +28,7 @@ function drawSlider(mem, address, name, init, min, max)
   local addressPtr = ffi.cast(init, mem + bit.band(address, 0x1fffff))
   local value = addressPtr[0]
   local changed
-  
-  -- it deals with signed types automatically despite the format string:
+
   changed, value = imgui.SliderInt(name, value, min, max, '%d' )
   if changed then addressPtr[0] = value end
 end
