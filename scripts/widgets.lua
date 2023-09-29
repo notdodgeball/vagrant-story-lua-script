@@ -21,7 +21,19 @@ function drawCheckbox(mem, address, name, valueOn, valueOff, isReadOnly)
   
 end
 
-function drawSlider(mem, address, name, init, min, max)
+function drawSlider(mem, address, name, ct, min, max)
+  
+  -- works nicely with min>max in cases where the logic is reversed
+  
+  local addressPtr = ffi.cast(ct, mem + bit.band(address, 0x1fffff))
+  local value = addressPtr[0]
+  local changed
+
+  changed, value = imgui.SliderInt(name, value, min, max, '%d')
+  if changed then addressPtr[0] = value end
+end
+
+function drawSliderLoop(mem, address, name, init, min, max, range)
   
   -- works nicely with min>max in cases where the logic is reversed
   
@@ -29,17 +41,25 @@ function drawSlider(mem, address, name, init, min, max)
   local value = addressPtr[0]
   local changed
 
-  changed, value = imgui.SliderInt(name, value, min, max, '%d' )
-  if changed then addressPtr[0] = value end
+  changed, value = imgui.SliderInt(name, value, min, max, '%d')
+
+  if changed then
+    for i=0,range,1 do
+      addressPtr[i] = value
+    end
+  end
+
 end
 
-function drawInput(mem, address, name, init, step, isReversed )
+function drawInput(mem, address, name, ct, step, isReversed )
   
   -- isReversed = true in the few cases in which the logic is reversed
   -- a optional parameter default value:
   step = step or 1
   
-  local addressPtr = ffi.cast(init, mem + bit.band(address, 0x1fffff))
+  local addressPtr
+  if ffi.istype(ct, address) then addressPtr = address else addressPtr = ffi.cast(ct, mem + bit.band(address, 0x1fffff)) end
+  
   local value = addressPtr[0]
   local changed
   

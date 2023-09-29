@@ -1,5 +1,69 @@
 -- Area, zone and room info from Datacrystal
 
+items_t = {}
+
+items_t[0x43] = "Cure Root";            items_t[0x44] = "Cure Bulb";
+items_t[0x45] = "Cure Tonic";           items_t[0x46] = "Cure Potion";
+items_t[0x47] = "Mana Root";            items_t[0x48] = "Mana Bulb";
+items_t[0x49] = "Mana Tonic";           items_t[0x4A] = "Mana Potion";
+items_t[0x4B] = "Vera Root";            items_t[0x4C] = "Vera Bulb";
+items_t[0x4D] = "Vera Tonic";           items_t[0x4E] = "Vera Potion";
+items_t[0x4F] = "Acolytes Nostrum";     items_t[0x50] = "Saints Nostrum";
+items_t[0x51] = "Alchemists Reagent";   items_t[0x52] = "Sorcerers Reagent";
+items_t[0x53] = "Yggdrasils Tears";     items_t[0x54] = "Faerie Chortle";
+items_t[0x55] = "Spirit Orison";        items_t[0x56] = "Angelic Paean";
+items_t[0x57] = "Panacea";              items_t[0x58] = "Snowfly Draught";
+items_t[0x59] = "Faerie Wing";          items_t[0x5A] = "Elixir Of Kings";
+items_t[0x5B] = "Elixir Of Sages";      items_t[0x5C] = "Elixir Of Dragoons";
+items_t[0x5D] = "Elixir Of Queens";     items_t[0x5E] = "Elixir Of Mages";
+items_t[0x5F] = "Valens";               items_t[0x60] = "Prudens";
+items_t[0x61] = "Volare";               items_t[0x62] = "Audentia";
+items_t[0x63] = "Virtus";               items_t[0x64] = "Eye Of Argon";
+--Grimoire Items
+items_t[0x82] = "Grimoire Zephyr";      items_t[0x83] = "Grimoire Teslae";
+items_t[0x84] = "Grimoire Incendie";    items_t[0x85] = "Grimoire Terre";
+items_t[0x86] = "Grimoire Glace";       items_t[0x87] = "Grimoire Lux";
+items_t[0x88] = "Grimoire Pater";       items_t[0x89] = "Grimoire Exsorcer";
+items_t[0x8A] = "Grimoire Banish";      items_t[0x8B] = "Grimoire Demolir";
+items_t[0x93] = "Grimoire Flamme";      items_t[0x97] = "Grimoire Gaea";
+items_t[0x9B] = "Grimoire Avalanche";   items_t[0x9F] = "Grimoire Radius";
+items_t[0xA1] = "Grimoire Meteore";     items_t[0xA7] = "Grimoire Egout";
+items_t[0xA8] = "Grimoire Demance";     items_t[0xA9] = "Grimoire Guerir";
+items_t[0xAA] = "Grimoire Mollesse";    items_t[0xAB] = "Grimoire Antidote";
+items_t[0xAC] = "Grimoire Benir";       items_t[0xAD] = "Grimoire Purifier";
+items_t[0xAE] = "Grimoire Vie";         items_t[0xAF] = "Grimoire Intensite";
+items_t[0xB0] = "Grimoire Debile";      items_t[0xB1] = "Grimoire Eclairer";
+items_t[0xB2] = "Grimoire Nuageux";     items_t[0xB3] = "Grimoire Agilite";
+items_t[0xB4] = "Grimoire Tardif";      items_t[0xB5] = "Grimoire Ameliorer";
+items_t[0xB6] = "Grimoire Deterior";    items_t[0xB7] = "Grimoire Muet";
+items_t[0xB8] = "Grimoire Annuler";     items_t[0xB9] = "Grimoire Paralysie";
+items_t[0xBA] = "Grimoire Venin";       items_t[0xBB] = "Grimoire Fleau";
+items_t[0xBC] = "Grimoire Halte";       items_t[0xBD] = "Grimoire Dissiper";
+items_t[0xBE] = "Grimoire Clef";        items_t[0xBF] = "Grimoire Visual";
+items_t[0xC0] = "Grimoire Snalyse";     items_t[0xC1] = "Grimoire Sylphe";
+items_t[0xC2] = "Grimoire Salamander";  items_t[0xC3] = "Grimoire Gnome";
+items_t[0xC4] = "Grimoire Undine";      items_t[0xC5] = "Grimoire Parebrise";
+items_t[0xC6] = "Grimoire Ignifuge";    items_t[0xC7] = "Grimoire Rempart";
+items_t[0xC8] = "Grimoire Barrer";    
+-- Key Items (On Max Codes Change 007F to 0001 For The Key Items)";
+items_t[0xCA] = "Bronze Key";           items_t[0xCB] = "Iron Key";
+items_t[0xCC] = "Silver Key";           items_t[0xCD] = "Gold Key";
+items_t[0xCE] = "Platinum Key";         items_t[0xCF] = "Steel Key";
+items_t[0xD0] = "Crimson Key";          items_t[0xD1] = "Chest Key";
+items_t[0xD2] = "Chamomile Sigil";      items_t[0xD3] = "Lily Sigil";
+items_t[0xD4] = "Tearose Sigil";        items_t[0xD5] = "Clematis Sigil";
+items_t[0xD6] = "Hyacinth Sigil";       items_t[0xD7] = "Fern Sigil";
+items_t[0xD8] = "Aster Sigil";          items_t[0xD9] = "Eulelia Sigil";
+items_t[0xDA] = "Melissa Sigil";        items_t[0xDB] = "Calla Sigil";
+items_t[0xDC] = "Laurel Sigil";         items_t[0xDD] = "Acacia Sigil";
+items_t[0xDE] = "Palm Sigil";           items_t[0xDF] = "Kalmia Sigil";
+items_t[0xE0] = "Colombine Sigil";      items_t[0xE1] = "Anemone Sigil";
+items_t[0xE2] = "Verbena Sigil";        items_t[0xE3] = "Schirra Sigil";
+items_t[0xE4] = "Marigold Sigil";       items_t[0xE5] = "Azalea Sigil";
+items_t[0xE6] = "Tigertail Sigil";      items_t[0xE7] = "Stock Sigil";
+items_t[0xE8] = "Cattleya Sigil";       items_t[0xE9] = "Mandrake Sigil";
+
+
 area_t = {}
 area_t[1] = "Unmapped";               area_t[2] = "Wine Cellar"
 area_t[3] = "Catacombs";              area_t[4] = "Sanctum"
@@ -9,7 +73,7 @@ area_t[9] = "Great Cathedral B1";     area_t[10] = "Great Cathedral L1"
 area_t[11] = "Great Cathedral L2";    area_t[12] = "Great Cathedral L3"
 area_t[13] = "Great Cathedral L4";    area_t[14] = "Forgotten Pathway"
 area_t[15] = "Escapeway";             area_t[16] = "Iron Maiden B1"
-area_t[17] = "Iron Maiden B2"         area_t[18] = "Iron Maiden B3"
+area_t[17] = "Iron Maiden B2";        area_t[18] = "Iron Maiden B3"
 area_t[20] = "Undercity West";        area_t[21] = "Undercity East"
 area_t[22] = "The Keep";              area_t[23] = "City Walls West"
 area_t[24] = "City Walls South";      area_t[25] = "City Walls East"
@@ -18,6 +82,18 @@ area_t[28] = "Snowfly Forest East";   area_t[29] = "Town Center West"
 area_t[30] = "Town Center South";     area_t[31] = "Town Center East"
 -- area_t[19] = "unused (Town Center, but very different)"
 -- area_t[32] = "unused (Snowfly Forest)"
+
+area_t2 = {
+ "Unmapped"              ,"Wine Cellar"         ,"Catacombs"             ,"Sanctum"
+,"Abandoned Mines B1"    ,"Abandoned Mines B2"  ,"Limestone Quarry"      ,"Temple of Kiltia"
+,"Great Cathedral B1"    ,"Great Cathedral L1"  ,"Great Cathedral L2"    ,"Great Cathedral L3"
+,"Great Cathedral L4"    ,"Forgotten Pathway"   ,"Escapeway"             ,"Iron Maiden B1"
+,"Iron Maiden B2"        ,"Iron Maiden B3"      ,"unused (Town Center, but very different)"
+,"Undercity West"        ,"Undercity East"      ,"The Keep"              ,"City Walls West"
+,"City Walls South"      ,"City Walls East"     ,"City Walls North"      ,"Snowfly Forest"
+,"Snowfly Forest East"   ,"Town Center West"    ,"Town Center South"     ,"Town Center East"
+,"unused (Snowfly Forest)"
+}
 
 map_t = {
 

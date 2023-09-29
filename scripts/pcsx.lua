@@ -18,6 +18,10 @@ local posX = 0x801203C4
 local posY = 0x801203C0
 local posZ = 0x801203C2
 local joker = 0x8005E1C0
+local itemId  = 0x80060F68
+local itemQtd = 0x80060F6A
+local itemIdPtr = ffi.cast('uint8_t*', mem + bit.band(itemId, 0x1fffff))
+local itemQtdPtr = ffi.cast('uint8_t*', mem + bit.band(itemQtd, 0x1fffff))
 
 function DrawImguiFrame()
   
@@ -30,6 +34,7 @@ function DrawImguiFrame()
   drawSlider(mem, 0x80121BE4, 'CurSpeed', 'uint8_t*', 0, 40)
   drawSlider(mem, 0x8011FA60, 'RISK', 'uint8_t*', 0, 255)
   drawSlider(mem, 0x8011FA62, 'STR', 'uint8_t*', 0, 255)
+  drawSliderLoop(mem, 0x801203D0 , 'size', 'int16_t*', 512, 14000, 2)
   
   -- Better than using a table actually
   imgui.SeparatorText("Coordinates")
@@ -39,27 +44,25 @@ function DrawImguiFrame()
   imgui.SameLine();           drawSlider(mem, posY, '__', 'int16_t*', -2500, 2500)
   imgui.SetNextItemWidth(90); drawInput(mem, posZ, 'Z', 'int16_t*', 1, true)
   imgui.SameLine();           drawSlider(mem, posZ, '___', 'int16_t*', 150, -500)
-
+  
   imgui.SeparatorText("Checks")
   drawCheckbox(mem, mode, 'Battle Mode', 0x01, 0x00, true)
-
+  
   imgui.SeparatorText("Rooms")
   if imgui.Button("Trigger Load Room") and mem[loadRoom] == 0 then mem[loadRoom] = 2 end
   
   imgui.SameLine(); imgui.BeginDisabled(); imgui.Button( string.format("%04X", roomIdToLoadPtr[0] ) ); imgui.EndDisabled()
   
   imgui.PushItemWidth(190)
-  
+
   if imgui.BeginCombo( " ", areaDesc ) then
     for k, v in pairs(area_t) do
       if imgui.Selectable( v ) then areaId=k; areaDesc=v end
     end
     imgui.EndCombo()
   end
-
-  imgui.PopItemWidth()
   
-  imgui.SameLine()
+  imgui.PopItemWidth()
   
   if imgui.BeginListBox( " " ) then
     
@@ -70,9 +73,23 @@ function DrawImguiFrame()
     
     imgui.EndListBox()
   end
-
+  
+  imgui.SeparatorText("Itens")
+  
+  if imgui.BeginListBox( "   " ) then
+    for i=0,200,4 do
+      itemIDDDD = itemIdPtr[i]
+      if itemIDDDD < 0x43 then break end
+      imgui.SetNextItemWidth(90);
+      drawInput(mem, itemQtdPtr+i , items_t[ itemIDDDD ], 'uint8_t*' )  -- certo: itemsMenu+i+2
+      --imgui.SameLine(); drawInput2(mem, itemsMenu+i+2, "a"..i, 'uint8_t*' )
+    end
+    
+    imgui.EndListBox()
+  end
+  
   -- drawRadio(mem, loadRoom, "loadRoom" )
-
+  
   imgui.End()
 end
 
