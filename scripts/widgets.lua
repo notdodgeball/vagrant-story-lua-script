@@ -33,11 +33,11 @@ function drawSlider(mem, address, name, ct, min, max)
   if changed then addressPtr[0] = value end
 end
 
-function drawSliderLoop(mem, address, name, init, min, max, range)
+function drawSliderLoop(mem, address, name, ct, min, max, range)
   
-  -- works nicely with min>max in cases where the logic is reversed
+  -- same as drawSlider, also changes the bytes ahead 
   
-  local addressPtr = ffi.cast(init, mem + bit.band(address, 0x1fffff))
+  local addressPtr = ffi.cast(ct, mem + bit.band(address, 0x1fffff))
   local value = addressPtr[0]
   local changed
 
@@ -66,6 +66,24 @@ function drawInput(mem, address, name, ct, step, isReversed )
   changed, value  = imgui.InputInt(name, value, step );
   if changed then
     if isReversed then addressPtr[0] = 2*addressPtr[0] - value else addressPtr[0] = value end
+  end
+end
+
+function drawDrag(mem, address, name, ct, min, max, speed )
+  
+  -- a optional parameter default value:
+  speed = speed or 1
+  
+  local addressPtr
+  if ffi.istype(ct, address) then addressPtr = address else addressPtr = ffi.cast(ct, mem + bit.band(address, 0x1fffff)) end
+  
+  local value = addressPtr[0]
+  local changed
+  
+  --imgui.constant.SliderFlags.AlwaysClamp
+  changed, value  = imgui.DragInt(name, value, speed, min, max, '%d')
+  if changed then
+    addressPtr[0] = value
   end
 end
 

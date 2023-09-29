@@ -1,3 +1,8 @@
+-- pointer to address
+-- x = tonumber(
+ -- ffi.cast("intptr_t", p)
+-- )
+ 
 local lastInput = 0
 local input_t = {}
 input_t[0x0001] = 'L2';       input_t[0x0002] = 'R2'
