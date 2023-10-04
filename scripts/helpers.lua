@@ -1,8 +1,3 @@
--- pointer to address
--- x = tonumber(
- -- ffi.cast("intptr_t", p)
--- )
- 
 local lastInput = 0
 local input_t = {}
 input_t[0x0001] = 'L2';       input_t[0x0002] = 'R2'
@@ -14,6 +9,10 @@ input_t[0x0400] = 'NULL';     input_t[0x0800] = 'Start'
 input_t[0x1000] = 'Up';       input_t[0x2000] = 'Right'
 input_t[0x4000] = 'Down';     input_t[0x8000] = 'Left'
 
+
+function dec2hex( num )
+  return ("%X"):format(math.abs(num))
+end
 
 function inputLogger(mem, address)
   
@@ -32,14 +31,13 @@ function inputLogger(mem, address)
   
   lastInput = jokerPtr[0]
   
-end
+  end
 
 function addBpWithCondition(mem, address, width, cause, condition)
   
   -- only breaks if the value being written is equal the given input condition
   -- declared globaly using the cause parameter
-  
-  if _G[cause] then error('') end
+  assert( not _G[cause] , ' ss ')
   
   _G[cause] = PCSX.addBreakpoint( address, 'Write', width, cause , function()
     
@@ -54,4 +52,31 @@ function addBpWithCondition(mem, address, width, cause, condition)
   end)
 end
 
+resume = 0
 
+function jfmsu(mem, address, maxTries)
+  
+	address = bit.band(address, 0x1fffff) + resume
+  maxTries = maxTries or 2
+	local tries = 0
+	for i=0,200,1 do
+		if mem[address+i] ~= 0 then
+			mem[address+i] = mem[address+i] + 0xCC
+			tries = tries+1
+		end
+		if tries == maxTries then resume = resume + i + 1; break end;
+	end
+end
+
+
+function comboList(t)
+  
+  -- Formats lua table to be used with imgui.Combo:
+  -- c, v = imgui.Combo("label", v, comboList(t) )
+  local list = ''
+  for k, v in pairs(t) do
+    list = v .. '\0' .. list
+  end
+  return list
+end
+  
