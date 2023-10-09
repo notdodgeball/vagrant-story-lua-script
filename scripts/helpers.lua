@@ -56,16 +56,16 @@ resume = 0
 
 function jfmsu(mem, address, maxTries)
   
-	address = bit.band(address, 0x1fffff) + resume
+  address = bit.band(address, 0x1fffff) + resume
   maxTries = maxTries or 2
-	local tries = 0
-	for i=0,200,1 do
-		if mem[address+i] ~= 0 then
-			mem[address+i] = mem[address+i] + 0xCC
-			tries = tries+1
-		end
-		if tries == maxTries then resume = resume + i + 1; break end;
-	end
+  local tries = 0
+  for i=0,200,1 do
+    if mem[address+i] ~= 0 then
+      mem[address+i] = mem[address+i] + 0xCC
+      tries = tries+1
+    end
+    if tries == maxTries then resume = resume + i + 1; break end;
+  end
 end
 
 
@@ -79,4 +79,49 @@ function comboList(t)
   end
   return list
 end
+
+
+local function returnKey (t, value)
   
+  -- Return the array key from the given value
+    for k, v in ipairs(t) do
+        if v == value then return k end
+    end
+end
+
+
+function decode(mem,address)
+  
+  -- Decodes text from game memory using the text_t table file
+  local address = ffi.cast('uint8_t*', mem + bit.band(address, 0x1fffff))
+  local text = ''
+  
+  for i=0,64,1 do
+    local charIndex = address[0+i]
+    if charIndex ~= 0xE7 then text = text .. text_t[charIndex] else break end;
+  end
+  
+  return text
+end
+
+
+function insert_string(mem,address,text,size)
+  
+  -- Inserts string into game memory using the text_t table file
+  -- the size parameter is needed for zeroing out the following btyes and to prevent overflow 
+  -- 0xE7 is the string terminator for Vagrant Story
+  
+  local address = ffi.cast('uint8_t*', mem + bit.band(address, 0x1fffff))
+
+  text = string.sub(text,1,size-1)
+
+  for i=0,size,1 do
+    if #text -i > 0 then
+      address[i] = returnKey( text_t, string.sub(text,i+1,i+1) )
+    elseif #text -i == 0 and #text ~= 0 then
+      address[i] = 0xE7
+    else
+      address[i] = 0
+    end
+  end
+end

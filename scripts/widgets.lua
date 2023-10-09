@@ -17,6 +17,7 @@ function drawCheckbox(mem, address, name, valueOn, valueOff, isReadOnly)
   if isReadOnly then imgui.EndDisabled() end
 end
 
+
 function drawSlider(mem, address, name, ct, min, max)
   
   -- works nicely with min>max in cases where the logic is reversed
@@ -27,6 +28,7 @@ function drawSlider(mem, address, name, ct, min, max)
   if changed then addressPtr[0] = value end
   
 end
+
 
 function drawSliderLoop(mem, address, name, ct, min, max, range)
   
@@ -43,7 +45,8 @@ function drawSliderLoop(mem, address, name, ct, min, max, range)
 
 end
 
-function drawInput(mem, address, name, ct, step, isReversed )
+
+function drawInputInt(mem, address, name, ct, step, isReversed )
   
   -- isReversed = true in the few cases in which the logic is reversed
   -- a optional parameter default value:
@@ -57,6 +60,7 @@ function drawInput(mem, address, name, ct, step, isReversed )
   end
   
 end
+
 
 function drawDrag(mem, address, name, ct, min, max, speed )
   
@@ -72,6 +76,7 @@ function drawDrag(mem, address, name, ct, min, max, speed )
   end
   
 end
+
 
 function drawRadio(mem, address, name )
   
@@ -90,6 +95,17 @@ function drawRadio(mem, address, name )
   imgui.EndGroup()
   
 end
+
+
+local lastInputText = '' --= decode(mem,address)
+
+function drawInputText(mem, address, name, size )
+  
+  local changed, value  = imgui.extra.InputText('##'..name, lastInputText ) --WithHint
+  if changed then insert_string(mem,address,value,size); lastInputText = value end
+  
+end
+
 
 function validateAddress(mem,address,ct)
   

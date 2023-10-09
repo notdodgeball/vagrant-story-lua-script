@@ -1,7 +1,36 @@
 -- Area, zone and room info from Datacrystal
 
-items_t = {}
+text_t = {   --starts at zero
+[0]= "0" ,"1" ,"2" ,"3" ,"4" ,"5" ,"6" ,"7" ,"8" ,"9" ,"A" ,"B" ,"C" ,"D" ,"E" ,"F"
+,"G" ,"H" ,"I" ,"J" ,"K" ,"L" ,"M" ,"N" ,"O" ,"P" ,"Q" ,"R" ,"S" ,"T" ,"U" ,"V"
+,"W" ,"X" ,"Y" ,"Z" ,"a" ,"b" ,"c" ,"d" ,"e" ,"f" ,"g" ,"h" ,"i" ,"j" ,"k" ,"l"
+,"m" ,"n" ,"o" ,"p" ,"q" ,"r" ,"s" ,"t" ,"u" ,"v" ,"w" ,"x" ,"y" ,"z" ,"Œ" ,"À"
+,"Á" ,"Â" ,"Ä" ,"Ç" ,"È" ,"É" ,"Ê" ,"Ë" ,"Ì" ,"Í" ,"Î" ,"Ï" ,"Ò" ,"Ó" ,"Ô" ,"Ö"
+,"Ù" ,"Ú" ,"Û" ,"Ü" ,"ß" ,"œ" ,"à" ,"á" ,"â" ,"ä" ,"ç" ,"è" ,"é" ,"ê" ,"ë" ,"ì"
+,"í" ,"î" ,"ï" ,"ò" ,"ó" ,"ô" ,"ö" ,"ù" ,"ú" ,"û" ,"ü" 
+,"(0x6B)" ,"(0x6C)" ,"(0x6D)" ,"(0x6E)" ,"(0x6F)","(0x70)" ,"(0x71)" ,"(0x72)" ,"(0x73)"
+,"(0x74)" ,"(0x75)" ,"(0x76)" ,"(0x77)" ,"(0x78)" ,"(0x79)" ,"(0x7A)" ,"(0x7B)" ,"(0x7C)" 
+,"(0x7D)" ,"(0x7E)" ,"(0x7F)","(0x80)" ,"(0x81)" ,"(0x82)" ,"(0x83)" ,"(0x84)" ,"(0x85)"
+,"„" ,"‼" ,"≠" ,"≤" ,"≥" ,"÷" ,"·" ,"-" ,"…" ," "
+,"!" ,"\"" ,"#" ,"$" ,"%" ,"&" ,"'" ,"(" ,")" ,"=" ,"@" ,"[" ,"]" ,"" ,":" ,","
+,"." ,"/" ,"\\" ,"<" ,">" ,"?" ,"_" ,"-" ,"+" ,"*" ,"\'" ,"{" ,"}" ,"♪" ,"∆" ,"□"
+,"○" ,"X" ,"←" ,"→" ,"↑" ,"↓" ,"Lv." ,"★" ,"█" ,"~" ,"ꜜ" ,"ꜜ" ,"ꜜ"
+,"(0xBD)" ,"(0xBE)","(0xBF)","(0xC0)" ,"(0xC1)" ,"(0xC2)" ,"(0xC3)" ,"(0xC4)" ,"(0xC5)"
+,"(0xC6)" ,"(0xC7)","(0xC8)" ,"(0xC9)" ,"(0xCA)" ,"(0xCB)" ,"(0xCC)" ,"(0xCD)" ,"(0xCE)" 
+,"(0xCF)","(0xD0)" ,"(0xD1)" ,"(0xD2)" ,"(0xD3)" ,"(0xD4)" ,"(0xD5)" ,"(0xD6)","(0xD7)",
+"(0xD8)" ,"(0xD9)" ,"(0xDA)" ,"(0xDB)" ,"(0xDC)" ,"(0xDD)" ,"(0xDE)" ,"(0xDF)","(0xE0)" 
+,"(0xE1)" ,"(0xE2)" ,"(0xE3)" ,"(0xE4)" ,"(0xE5)" ,"(0xE6)" 
+,"|"     -- End bubble
+,"\r\n"  -- New line
+,"(0xE9)" ,"(0xEA)" 
+,"\n"    -- End Dialogue
+,"(0xEC)" ,"(0xED)" ,"(0xEE)" ,"(0xEF)"
+,"(0xF0)" ,"(0xF1)" ,"(0xF2)" ,"(0xF3)" ,"(0xF4)" ,"(0xF5)" ,"(0xF6)" ,"(0xF7)"
+,"" ,"" ,"" ,"" ,"" ,"" ,"" ,""
+}
 
+
+items_t = {}
 items_t[0x43] = "Cure Root";            items_t[0x44] = "Cure Bulb";
 items_t[0x45] = "Cure Tonic";           items_t[0x46] = "Cure Potion";
 items_t[0x47] = "Mana Root";            items_t[0x48] = "Mana Bulb";
@@ -94,8 +123,8 @@ area_t2 = {
 ,"Town Center West"      ,"Town Center South"   ,"Town Center East"      ,"unused (Snowfly Forest)"
 }
 
-map_t = {
 
+map_t = {
 {area = 1, id = 3337,  desc = "Wine Cellar: Chamber of Fear (after the quake)"},
 {area = 1, id = 3593,  desc = "Ashley and Merlose at the Wine Cellar gate"},
 {area = 1, id = 4617,  desc = "Wine Cellar: Room of Rotten Grapes (after defeating Lich)"},
@@ -504,5 +533,4 @@ map_t = {
 {area = 31, id = 39,  desc = "Plateia Lumitar"},
 {area = 31, id = 45,  desc = "Workshop Metal Works"},
 {area = 31, id = 46,  desc = "Wkshop Junction Point"}
-
 }
