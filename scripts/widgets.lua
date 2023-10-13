@@ -97,15 +97,45 @@ function drawRadio(mem, address, name )
 end
 
 
-local lastInputText = '' --= decode(mem,address)
-
 function drawInputText(mem, address, name, size )
   
-  local changed, value  = imgui.extra.InputText('##'..name, lastInputText ) --WithHint
-  if changed then insert_string(mem,address,value,size); lastInputText = value end
+  -- if this function returned a value to it's own name, we'd lose keyboard focus for every char typed, not sure why
+  -- And given that lua strings are alwyas passed as value, always
+  -- we use the _G environment to bypass that
+
+  local hint = _G[name] or name
+  local changed, value = imgui.extra.InputText('##'..name, hint , imgui.constant.InputTextFlags.EnterReturnsTrue)
+  if changed then
+    insert_string(mem,address,value,size)
+    _G[name] = value
+  end
   
 end
 
+
+function drawSaveButton(saveName)
+      if imgui.Button('Save') and not isEmpty(saveName) then
+        local save = PCSX.createSaveState()
+        local file = Support.File.open(saveName, 'TRUNCATE')
+        if not file:failed() then
+          file:writeMoveSlice(save)
+          print('Saved file' .. saveName)
+        end
+        file:close()
+      end
+end
+
+
+function drawLoadButton(saveName)
+    if imgui.Button('Load') and not isEmpty(saveName) then
+      local file = Support.File.open(saveName, 'READ')
+      if not file:failed() then
+        PCSX.loadSaveState(file)
+        print('Loaded file ' .. saveName)
+      end
+    file:close()
+  end
+end
 
 function validateAddress(mem,address,ct)
   

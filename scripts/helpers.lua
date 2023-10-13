@@ -10,6 +10,10 @@ input_t[0x1000] = 'Up';       input_t[0x2000] = 'Right'
 input_t[0x4000] = 'Down';     input_t[0x8000] = 'Left'
 
 
+function isEmpty(s)
+  return s == nil or s == ''
+end
+
 function dec2hex( num )
   return ("%X"):format(math.abs(num))
 end
@@ -50,12 +54,14 @@ function addBpWithCondition(mem, address, width, cause, condition)
     
     if regValue == condition then PCSX.pauseEmulator(); PCSX.GUI.jumpToPC(pc) end
   end)
+  
 end
 
 resume = 0
 
 function jfmsu(mem, address, maxTries)
   
+  -- This function is just a poor attempt
   address = bit.band(address, 0x1fffff) + resume
   maxTries = maxTries or 2
   local tries = 0
@@ -108,7 +114,7 @@ end
 function insert_string(mem,address,text,size)
   
   -- Inserts string into game memory using the text_t table file
-  -- the size parameter is needed for zeroing out the following btyes and to prevent overflow 
+  -- the size parameter is used for zeroing out the following btyes and to prevent overflow 
   -- 0xE7 is the string terminator for Vagrant Story
   
   local address = ffi.cast('uint8_t*', mem + bit.band(address, 0x1fffff))
