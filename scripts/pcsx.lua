@@ -35,8 +35,13 @@ local itemIdPtr   = ffi.cast('uint8_t*', mem + bit.band(itemId, 0x1fffff))
 local itemQtdPtr  = ffi.cast('uint8_t*', mem + bit.band(itemQtd, 0x1fffff))
 
 local saveName    = ''
+local currWeapon  = 0x8011fa7c
 
 print(_VERSION)
+
+-- imgui.constant.InputTextFlags.CharsNoBlank
+-- imgui.constant.InputTextFlags.CharsHexadecimal
+-- imgui.constant.InputTextFlags.CharsUppercase
 
 function DrawImguiFrame()
   
@@ -44,10 +49,6 @@ function DrawImguiFrame()
   if not show then imgui.End() return end
   
   inputLogger(mem,joker)
-  
-  if imgui.Button('reset  ') then resume = 0 end
-  imgui.SameLine();
-  if imgui.Button('jfmsu ' .. dec2hex(0x801203A6+resume)) then jfmsu(mem, 0x801203A6) end
   
   imgui.SeparatorText('Tabs')
   
@@ -130,12 +131,14 @@ function DrawImguiFrame()
       imgui.EndTabItem()
     end -- Save/Load
     
-    if imgui.BeginTabItem('Weapons') then
-      -- decode(mem,address)
-      drawInputText(mem, 0x80060170, 'Weapon1', 16 )
+    if imgui.BeginTabItem('Weapon') then
+      if imgui.SmallButton("Read") then _G['weapon'] = decode(mem,currWeapon,16,text_t) end
+      imgui.SameLine()
+      drawInputText(mem, currWeapon, 'weapon', 16 )
+      
       imgui.EndTabItem()
-    end -- Weapons
-    
+    end -- Weapon
+
     imgui.EndTabBar()
   end -- MyTabBar
   

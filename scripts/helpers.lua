@@ -9,15 +9,6 @@ input_t[0x0400] = 'NULL';     input_t[0x0800] = 'Start'
 input_t[0x1000] = 'Up';       input_t[0x2000] = 'Right'
 input_t[0x4000] = 'Down';     input_t[0x8000] = 'Left'
 
-
-function isEmpty(s)
-  return s == nil or s == ''
-end
-
-function dec2hex( num )
-  return ("%X"):format(math.abs(num))
-end
-
 function inputLogger(mem, address)
   
   -- prints the controller input
@@ -35,7 +26,30 @@ function inputLogger(mem, address)
   
   lastInput = jokerPtr[0]
   
+end
+
+function isEmpty(s)
+  return s == nil or s == ''
+end
+
+function dec2hex( num )
+  return ("%X"):format(math.abs(num))
+end
+
+function validateAddress(mem,address,ct)
+  
+  -- istype checks if it's already a pointer
+  local addressPtr
+  
+  if ffi.istype(ct, address) then
+    addressPtr = address
+  else
+    addressPtr = ffi.cast(ct, mem + bit.band(address, 0x1fffff))
   end
+  
+  return addressPtr, addressPtr[0]
+  
+end
 
 function addBpWithCondition(mem, address, width, cause, condition)
   
@@ -49,7 +63,7 @@ function addBpWithCondition(mem, address, width, cause, condition)
     local pc = regs.pc
     local pc_ptr = ffi.cast('uint32_t*', mem + bit.band(pc, 0x1fffff))
     
-    local regIndex = bit.band( bit.rshift( pc_ptr[0] , 16), 0x1f )     -- 0001 1111
+    local regIndex = bit.band( bit.rshift( pc_ptr[0] , 16), 0x1f )
     local regValue = PCSX.getRegisters().GPR.r[regIndex]               -- array starts at 0
     
     if regValue == condition then PCSX.pauseEmulator(); PCSX.GUI.jumpToPC(pc) end
@@ -59,15 +73,15 @@ end
 
 resume = 0
 
-function jfmsu(mem, address, maxTries)
+function jfmsu(mem, address, value, maxTries)
   
-  -- This function is just a poor attempt
+  -- For poking adresses and seeing what changes
   address = bit.band(address, 0x1fffff) + resume
   maxTries = maxTries or 2
   local tries = 0
   for i=0,200,1 do
     if mem[address+i] ~= 0 then
-      mem[address+i] = mem[address+i] + 0xCC
+      mem[address+i] = mem[address+i] + value
       tries = tries+1
     end
     if tries == maxTries then resume = resume + i + 1; break end;
@@ -96,24 +110,25 @@ local function returnKey (t, value)
 end
 
 
-function decode(mem,address)
+function decode(mem,address,size,tbl)
   
-  -- Decodes text from game memory using the text_t table file
+  -- Decodes text from game memory using the a text table file
+  -- for ASCII, string.byte should work
   local address = ffi.cast('uint8_t*', mem + bit.band(address, 0x1fffff))
   local text = ''
   
-  for i=0,64,1 do
+  for i=0,size,1 do
     local charIndex = address[0+i]
-    if charIndex ~= 0xE7 then text = text .. text_t[charIndex] else break end;
+    if charIndex ~= 0xE7 then text = text .. tbl[charIndex] else break end;
   end
   
   return text
 end
 
 
-function insert_string(mem,address,text,size)
+function insert_string(mem,address,size,tbl,text)
   
-  -- Inserts string into game memory using the text_t table file
+  -- Inserts string into game memory using the a text table file
   -- the size parameter is used for zeroing out the following btyes and to prevent overflow 
   -- 0xE7 is the string terminator for Vagrant Story
   
@@ -123,7 +138,7 @@ function insert_string(mem,address,text,size)
 
   for i=0,size,1 do
     if #text -i > 0 then
-      address[i] = returnKey( text_t, string.sub(text,i+1,i+1) )
+      address[i] = returnKey( tbl, string.sub(text,i+1,i+1) )
     elseif #text -i == 0 and #text ~= 0 then
       address[i] = 0xE7
     else

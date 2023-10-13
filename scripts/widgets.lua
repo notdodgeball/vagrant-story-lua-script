@@ -106,7 +106,7 @@ function drawInputText(mem, address, name, size )
   local hint = _G[name] or name
   local changed, value = imgui.extra.InputText('##'..name, hint , imgui.constant.InputTextFlags.EnterReturnsTrue)
   if changed then
-    insert_string(mem,address,value,size)
+    insert_string(mem,address,size,text_t,value)
     _G[name] = value
   end
   
@@ -135,19 +135,4 @@ function drawLoadButton(saveName)
       end
     file:close()
   end
-end
-
-function validateAddress(mem,address,ct)
-  
-  -- istype checks if it's already a pointer
-  local addressPtr
-  
-  if ffi.istype(ct, address) then
-    addressPtr = address
-  else
-    addressPtr = ffi.cast(ct, mem + bit.band(address, 0x1fffff))
-  end
-  
-  return addressPtr, addressPtr[0]
-  
 end
