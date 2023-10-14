@@ -6,7 +6,6 @@
 require 'widgets'
 require 'map'
 require 'helpers'
--- _ = require 'underscore'
 
 local mem = PCSX.getMemPtr()
 local areaDesc = 'Select area'
@@ -18,15 +17,19 @@ local loadRoom        = 0x0F1A48
 local roomIdToLoad    = 0x800F1AB0
 local roomIdToLoadPtr = ffi.cast('uint16_t*', mem +  bit.band( roomIdToLoad, 0x1fffff))
 
-local posX        = 0x801203C4
 local posY        = 0x801203C0
 local posZ        = 0x801203C2
+local posX        = 0x801203C4
+local ashleySize  = 0x801203D0
+
 local maxSpeed    = 0x8011fa73
 local curSpeed    = 0x80121BE4
 local risk        = 0x8011FA60
 local strength    = 0x8011FA62
-local ashleySize  = 0x801203D0
 local bossSize    = 0x80181550
+local bossY       = 0x80181540
+local bossZ       = 0x80181542
+local bossX       = 0x80181544
 
 local itemCount   = 0
 local itemId      = 0x80060F68
@@ -72,6 +75,7 @@ function DrawImguiFrame()
       
       imgui.SeparatorText('Checks')
       drawCheckbox(mem, mode, 'Battle Mode', 0x01, 0x00, true)
+      --print(PCSX.SIO0.slots[1].pads[1].getButton(PCSX.CONSTS.PAD.BUTTON.DOWN))
       imgui.EndTabItem()
     end -- Values
     
@@ -103,19 +107,20 @@ function DrawImguiFrame()
     if imgui.BeginTabItem('Items') then
       
       if imgui.BeginListBox( '##Item' ) then
-        for i=0,255,4 do
-          id = itemIdPtr[i]
-          if id < 0x43 then itemCount = i; break end
+        local i = 0
+        while itemIdPtr[i] >=  0x43 do
           imgui.SetNextItemWidth(80);
-          drawInputInt(mem, itemQtdPtr+i , items_t[ id ], 'uint8_t*' ) 
+          drawInputInt(mem, itemQtdPtr+i , items_t[ itemIdPtr[i] ], 'uint8_t*' ) 
+          i = i +4
         end
+        itemCount = i
         imgui.EndListBox()
       end
       
       imgui.SetNextItemWidth(150);
       if imgui.BeginCombo( '##New item', 'Add a new item:' ) then
         for k, v in pairs(items_t) do
-          if imgui.Selectable( v ) then itemIdPtr[itemCount] = k; itemQtdPtr[itemCount] = 1 end
+        if imgui.Selectable( v ) then itemIdPtr[itemCount] = k; itemIdPtr[itemCount+1] = 1; itemQtdPtr[itemCount] = 1 end
         end
         imgui.EndCombo()
       end
@@ -138,7 +143,7 @@ function DrawImguiFrame()
       
       imgui.EndTabItem()
     end -- Weapon
-
+    
     imgui.EndTabBar()
   end -- MyTabBar
   
