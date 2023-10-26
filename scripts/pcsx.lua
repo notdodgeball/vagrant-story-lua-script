@@ -35,6 +35,7 @@ local itemIdPtr       = ffi.cast('uint8_t*', mem + bit.band(itemId, 0x1fffff))
 local itemQtdPtr      = ffi.cast('uint8_t*', mem + bit.band(itemQtd, 0x1fffff))
 
 local saveName        = ''
+local charName        = 0x8011FA40
 local currWeaponName  = 0x8011fa7c
 local square          = PCSX.CONSTS.PAD.BUTTON.SQUARE
 local canMoonJump     = false
@@ -42,6 +43,13 @@ local hexFlags        =  bit.bor (
   bit.bor( imgui.constant.InputTextFlags.CharsHexadecimal , imgui.constant.InputTextFlags.CharsNoBlank )
   , bit.bor( imgui.constant.InputTextFlags.EnterReturnsTrue , imgui.constant.InputTextFlags.CharsUppercase )
 )
+
+local file = Support.File.open('s1', 'READ')
+if not file:failed() then
+  PCSX.loadSaveState(file)
+  print('Loaded file ' .. 's1')
+end
+file:close()
 
 _vsync = PCSX.Events.createEventListener('GPU::Vsync', h.doFreeze )
 
@@ -157,7 +165,8 @@ function DrawImguiFrame()
     
     if imgui.BeginTabItem('Strings') then
       
-      w.drawInputText(mem, currWeaponName, 'Weapon name', 16 )
+      w.drawInputText(mem, currWeaponName, 'Weapon\'s name', 16 )
+      w.drawInputText(mem, charName, 'Character\'s name', 16 )
       
       imgui.EndTabItem()
     end -- Strings

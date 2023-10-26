@@ -108,7 +108,7 @@ function widgets.drawInputText(mem, address, name, size )
   
 end
 
-
+-- these two below save and load uncompressed files and therefore are incompatible with saves created from the pcsx interface
 
 function widgets.drawSaveButton(saveName)
   if imgui.Button('Save') and not isEmpty(saveName) then

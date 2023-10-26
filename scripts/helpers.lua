@@ -58,6 +58,7 @@ function helpers.isEmpty(s)
   return s == nil or s == ''
 end
 
+
 function helpers.addBpWithCondition(mem, address, width, cause, condition)
   
   -- only breaks if the value being written is equal the given input condition
