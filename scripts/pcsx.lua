@@ -3,14 +3,13 @@
 -- made by optrin
 --========================================================
 
-require 'widgets'
+w = require 'widgets'
+h = require 'helpers'
 require 'map'
-require 'helpers'
--- _ = require 'underscore'
 
-local mem         = PCSX.getMemPtr()
-local areaDesc    = 'Select area'
-local areaId      = 0
+local mem             = PCSX.getMemPtr()
+local areaDesc        = 'Select area'
+local areaId          = 0
 
 local joker           = 0x8005E1C0 -- 0x8005E238
 local mode            = 0x8011FA10
@@ -18,66 +17,62 @@ local loadRoom        = 0x0F1A48
 local roomIdToLoad    = 0x800F1AB0
 local roomIdToLoadPtr = ffi.cast('uint16_t*', mem +  bit.band( roomIdToLoad, 0x1fffff))
 
-local posX        = 0x801203C4
-local posY        = 0x801203C0
-local posZ        = 0x801203C2
-local posZPtr     = ffi.cast('uint16_t*', mem + bit.band(posZ, 0x1fffff))
-local maxSpeed    = 0x8011fa73
-local curSpeed    = 0x80121BE4
-local risk        = 0x8011FA60
-local strength    = 0x8011FA62
-local ashleySize  = 0x801203D0
-local bossSize    = 0x80181550
+local posX            = 0x801203C4
+local posY            = 0x801203C0
+local posZ            = 0x801203C2
+local posZPtr         = ffi.cast('uint16_t*', mem + bit.band(posZ, 0x1fffff))
+local maxSpeed        = 0x8011fa73
+local curSpeed        = 0x80121BE4
+local risk            = 0x8011FA60
+local strength        = 0x8011FA62
+local ashleySize      = 0x801203D0
+local bossSize        = 0x80181550
 
-local itemCount   = 0
-local itemId      = 0x80060F68
-local itemQtd     = 0x80060F6A
-local itemIdPtr   = ffi.cast('uint8_t*', mem + bit.band(itemId, 0x1fffff))
-local itemQtdPtr  = ffi.cast('uint8_t*', mem + bit.band(itemQtd, 0x1fffff))
+local itemCount       = 0
+local itemId          = 0x80060F68
+local itemQtd         = 0x80060F6A
+local itemIdPtr       = ffi.cast('uint8_t*', mem + bit.band(itemId, 0x1fffff))
+local itemQtdPtr      = ffi.cast('uint8_t*', mem + bit.band(itemQtd, 0x1fffff))
 
-local saveName    = ''
-local currWeapon  = 0x8011fa7c
+local saveName        = ''
+local currWeaponName  = 0x8011fa7c
+local square          = PCSX.CONSTS.PAD.BUTTON.SQUARE
+local canMoonJump     = false
+local hexFlags        =  bit.bor ( 
+  bit.bor( imgui.constant.InputTextFlags.CharsHexadecimal , imgui.constant.InputTextFlags.CharsNoBlank )
+  , bit.bor( imgui.constant.InputTextFlags.EnterReturnsTrue , imgui.constant.InputTextFlags.CharsUppercase )
+)
 
-local canMoonJump = false
-local square      = PCSX.CONSTS.PAD.BUTTON.SQUARE
-
-print(_VERSION)
-
--- imgui.constant.InputTextFlags.CharsNoBlank
--- imgui.constant.InputTextFlags.CharsHexadecimal
--- imgui.constant.InputTextFlags.CharsUppercase
-
+_vsync = PCSX.Events.createEventListener('GPU::Vsync', h.doFreeze )
 
 function DrawImguiFrame()
   
   local show = imgui.Begin('Command', true)
   if not show then imgui.End() return end
   
-  inputLogger(mem,joker)
- 
-  imgui.SeparatorText('Tabs')
+  h.inputLogger(mem,joker)
   
-  if imgui.BeginTabBar('MyTabBar') then
+  if imgui.BeginTabBar('MainBar') then
     
-    
+
     if imgui.BeginTabItem('Values') then
-      drawSlider(mem, maxSpeed , 'MaxSpeed', 'uint8_t*', 0, 40)
-      drawSlider(mem, curSpeed, 'CurSpeed', 'uint8_t*', 0, 40)
-      drawSlider(mem, strength, 'STR', 'uint8_t*', 0, 255)
-      drawSliderLoop(mem, ashleySize , 'Size AS', 'int16_t*', 512, 14000, 2)
-      drawSliderLoop(mem, bossSize   , 'Size BO', 'int16_t*', 512, 14000, 2)
+      
+      w.drawSlider(mem, maxSpeed , 'MaxSpeed', 'uint8_t*', 0, 40)
+      w.drawSlider(mem, curSpeed, 'CurSpeed', 'uint8_t*', 0, 40)
+      w.drawSlider(mem, strength, 'STR', 'uint8_t*', 0, 255)
+      w.drawSliderLoop(mem, ashleySize , 'Size AS', 'int16_t*', 512, 14000, 2)
       
       -- Better than using a table actually
       imgui.SeparatorText('Coordinates')
-      imgui.SetNextItemWidth(90); drawInputInt(mem, posX, 'X', 'int16_t*')
-      imgui.SameLine();           drawSlider(mem, posX, '##x', 'int16_t*', -2500, 2500)
-      imgui.SetNextItemWidth(90); drawInputInt(mem, posY, 'Y', 'int16_t*')
-      imgui.SameLine();           drawSlider(mem, posY, '##y', 'int16_t*', -2500, 2500)
-      imgui.SetNextItemWidth(90); drawInputInt(mem, posZ, 'Z', 'int16_t*', 1, true)
-      imgui.SameLine();           drawSlider(mem, posZ, '##z', 'int16_t*', 150, -500)
+      imgui.SetNextItemWidth(90); w.drawInputInt(mem, posX, 'X', 'int16_t*')
+      imgui.SameLine();           w.drawSlider(mem, posX, '##x', 'int16_t*', -2500, 2500)
+      imgui.SetNextItemWidth(90); w.drawInputInt(mem, posY, 'Y', 'int16_t*')
+      imgui.SameLine();           w.drawSlider(mem, posY, '##y', 'int16_t*', -2500, 2500)
+      imgui.SetNextItemWidth(90); w.drawInputInt(mem, posZ, 'Z', 'int16_t*', 1, true)
+      imgui.SameLine();           w.drawSlider(mem, posZ, '##z', 'int16_t*', 150, -500)
       
       imgui.SeparatorText('Checks')
-      drawCheckbox(mem, mode, 'Battle Mode', 0x01, 0x00, true)
+      w.drawCheckbox(mem, mode, 'Battle Mode', 0x01, 0x00, true)
       imgui.SameLine();
       _, canMoonJump = imgui.Checkbox('Moon Jump', canMoonJump)
       
@@ -85,11 +80,32 @@ function DrawImguiFrame()
         if PCSX.SIO0.slots[1].pads[1].getButton(square) then posZPtr[0] = posZPtr[0] - 20 end
       end
       
+      imgui.SeparatorText('Freeze')
+      _, h.canFreeze = imgui.Checkbox('Enable freeze', h.canFreeze)
+      
+      imgui.SetNextItemWidth(100); 
+      local changed, freezeValue = imgui.extra.InputText('Add address', '' , hexFlags )
+      if changed then 
+        local freezeNumber = tonumber(freezeValue, 16)
+        h.addFreeze(mem,freezeNumber)
+      end
+      
+      imgui.SetNextItemWidth(180); 
+      if imgui.BeginListBox( '##Frozen' ) then
+        for k, v in pairs(h.frozenAddresses) do
+          if imgui.SmallButton('x##'..k) then h.frozenAddresses[k] = nil end
+          imgui.SameLine();
+          imgui.Selectable( ("8%.7X"):format(math.abs(k)) .. ' - ' .. h.dec2hex( v[2] ) )
+        end
+        imgui.EndListBox()
+      end
+      
       imgui.EndTabItem()
     end -- Values
     
     
     if imgui.BeginTabItem('Rooms') then
+      
       if imgui.Button('Trigger Load Room:') and mem[loadRoom] == 0 then mem[loadRoom] = 2 end
       imgui.SameLine(); imgui.TextUnformatted( string.format( '%04X', roomIdToLoadPtr[0] ) )
       imgui.PushItemWidth(190)
@@ -122,7 +138,7 @@ function DrawImguiFrame()
           id = itemIdPtr[i]
           if id < 0x43 then itemCount = i; break end
           imgui.SetNextItemWidth(80);
-          drawInputInt(mem, itemQtdPtr+i , items_t[ id ], 'uint8_t*' ) 
+          w.drawInputInt(mem, itemQtdPtr+i , items_t[ id ], 'uint8_t*' ) 
         end
         imgui.EndListBox()
       end
@@ -139,26 +155,25 @@ function DrawImguiFrame()
     end --Items
     
     
+    if imgui.BeginTabItem('Strings') then
+      
+      w.drawInputText(mem, currWeaponName, 'Weapon name', 16 )
+      
+      imgui.EndTabItem()
+    end -- Strings
+    
+      
     if imgui.BeginTabItem('Save/Load') then
       
       _, saveName = imgui.extra.InputText('save file name', saveName )
-      drawSaveButton(saveName); imgui.SameLine(); drawLoadButton(saveName)
+      w.drawSaveButton(saveName); imgui.SameLine(); w.drawLoadButton(saveName)
       
       imgui.EndTabItem()
     end -- Save/Load
     
     
-    if imgui.BeginTabItem('Weapon') then
-      if imgui.SmallButton("Read") then _G['weapon'] = decode(mem,currWeapon,16,text_t) end
-      imgui.SameLine()
-      drawInputText(mem, currWeapon, 'weapon', 16 )
-      
-      imgui.EndTabItem()
-    end -- Weapon
-    
-    
     imgui.EndTabBar()
-  end -- MyTabBar
+  end -- MainBar
   
   imgui.End()
 end

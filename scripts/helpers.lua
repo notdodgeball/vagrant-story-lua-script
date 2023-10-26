@@ -1,3 +1,5 @@
+local helpers = {}
+
 local lastInput = 0
 local input_t = {}
 input_t[0x0001] = 'L2';       input_t[0x0002] = 'R2'
@@ -9,10 +11,12 @@ input_t[0x0400] = 'NULL';     input_t[0x0800] = 'Start'
 input_t[0x1000] = 'Up';       input_t[0x2000] = 'Right'
 input_t[0x4000] = 'Down';     input_t[0x8000] = 'Left'
 
-function inputLogger(mem, address)
+
+function helpers.inputLogger(mem, address)
   
   -- prints the controller input
-  local jokerPtr = ffi.cast('uint16_t*', mem + bit.band(address, 0x1fffff))
+  local jokerPtr, value = helpers.validateAddress(mem,address,'uint16_t*')
+  
   local input = ''
   
   if jokerPtr[0] ~= lastInput and jokerPtr[0] ~= 0 then
@@ -24,26 +28,24 @@ function inputLogger(mem, address)
     print (input)
   end
   
-  lastInput = jokerPtr[0]
+  lastInput = value
   
 end
 
-function isEmpty(s)
-  return s == nil or s == ''
-end
 
-function dec2hex( num )
+function helpers.dec2hex( num )
   return ("%X"):format(math.abs(num))
 end
 
-function validateAddress(mem,address,ct)
+
+function helpers.validateAddress(mem,address,ct)
   
   -- istype checks if it's already a pointer
   local addressPtr
   
   if ffi.istype(ct, address) then
     addressPtr = address
-  else
+    else
     addressPtr = ffi.cast(ct, mem + bit.band(address, 0x1fffff))
   end
   
@@ -51,19 +53,25 @@ function validateAddress(mem,address,ct)
   
 end
 
-function addBpWithCondition(mem, address, width, cause, condition)
+
+function helpers.isEmpty(s)
+  return s == nil or s == ''
+end
+
+function helpers.addBpWithCondition(mem, address, width, cause, condition)
   
   -- only breaks if the value being written is equal the given input condition
-  -- declared globaly using the cause parameter
-  assert( not _G[cause] , ' ss ')
+  -- declared using the cause parameter
+  assert( not helpers[cause] , cause .. ' already exists.')
   
-  _G[cause] = PCSX.addBreakpoint( address, 'Write', width, cause , function()
+  helpers[cause] = PCSX.addBreakpoint( address, 'Write', width, cause , function()
     
     local regs = PCSX.getRegisters()
     local pc = regs.pc
-    local pc_ptr = ffi.cast('uint32_t*', mem + bit.band(pc, 0x1fffff))
     
-    local regIndex = bit.band( bit.rshift( pc_ptr[0] , 16), 0x1f )
+    local pc_ptr, value = helpers.validateAddress(mem,pc,'uint32_t*')
+    
+    local regIndex = bit.band( bit.rshift(value , 16), 0x1f )
     local regValue = PCSX.getRegisters().GPR.r[regIndex]               -- array starts at 0
     
     if regValue == condition then PCSX.pauseEmulator(); PCSX.GUI.jumpToPC(pc) end
@@ -71,9 +79,10 @@ function addBpWithCondition(mem, address, width, cause, condition)
   
 end
 
-resume = 0
 
-function jfmsu(mem, address, value, maxTries)
+local resume = 0
+
+function helpers.jfmsu(mem, address, value, maxTries)
   
   -- For poking adresses and seeing what changes
   address = bit.band(address, 0x1fffff) + resume
@@ -89,7 +98,7 @@ function jfmsu(mem, address, value, maxTries)
 end
 
 
-function comboList(t)
+function helpers.comboList(t)
   
   -- Formats lua table to be used with imgui.Combo:
   -- c, v = imgui.Combo("label", v, comboList(t) )
@@ -101,24 +110,24 @@ function comboList(t)
 end
 
 
-local function returnKey (t, value)
+function helpers.returnKey (t, value)
   
   -- Return the array key from the given value
-    for k, v in ipairs(t) do
-        if v == value then return k end
-    end
+  for k, v in ipairs(t) do
+    if v == value then return k end
+  end
 end
 
 
-function decode(mem,address,size,tbl)
+function helpers.decode(mem,address,size,tbl)
   
   -- Decodes text from game memory using the a text table file
   -- for ASCII, string.byte should work
-  local address = ffi.cast('uint8_t*', mem + bit.band(address, 0x1fffff))
+  local addressPtr = ffi.cast('uint8_t*', mem + bit.band(address, 0x1fffff))
   local text = ''
   
   for i=0,size,1 do
-    local charIndex = address[0+i]
+    local charIndex = addressPtr[0+i]
     if charIndex ~= 0xE7 then text = text .. tbl[charIndex] else break end;
   end
   
@@ -126,23 +135,50 @@ function decode(mem,address,size,tbl)
 end
 
 
-function insert_string(mem,address,size,tbl,text)
+function helpers.insert_string(mem,address,size,tbl,text)
   
   -- Inserts string into game memory using the a text table file
   -- the size parameter is used for zeroing out the following btyes and to prevent overflow 
   -- 0xE7 is the string terminator for Vagrant Story
+  local addressPtr = ffi.cast('uint8_t*', mem + bit.band(address, 0x1fffff))
   
-  local address = ffi.cast('uint8_t*', mem + bit.band(address, 0x1fffff))
-
   text = string.sub(text,1,size-1)
-
+  
   for i=0,size,1 do
     if #text -i > 0 then
-      address[i] = returnKey( tbl, string.sub(text,i+1,i+1) )
-    elseif #text -i == 0 and #text ~= 0 then
-      address[i] = 0xE7
-    else
-      address[i] = 0
+      addressPtr[i] = helpers.returnKey( tbl, string.sub(text,i+1,i+1) )
+      elseif #text -i == 0 and #text ~= 0 then
+      addressPtr[i] = 0xE7
+      else
+      addressPtr[i] = 0
     end
   end
 end
+
+
+helpers.frozenAddresses = {}
+
+function helpers.addFreeze(mem,address,value)
+  
+  -- Add a address to the frozenAddresses table, value is optional
+  address = bit.band(address, 0x1fffff)
+  local pointer = ffi.cast('uint8_t*', mem + address)
+  local value = value or pointer[0]
+  helpers.frozenAddresses[address] = { pointer, value }
+end 
+
+
+helpers.canFreeze = true
+
+function helpers.doFreeze()
+  
+  -- used like:
+  -- PCSX.Events.createEventListener('GPU::Vsync', helpers.doFreeze )
+  if helpers.canFreeze then 
+    for k, v in pairs(helpers.frozenAddresses) do
+      v[1][0] = v[2] -- pointer[0] = value
+    end
+  end
+end
+
+return helpers
