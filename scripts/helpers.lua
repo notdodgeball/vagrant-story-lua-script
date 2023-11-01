@@ -29,11 +29,12 @@ function helpers.inputLogger(mem, address)
   end
   
   lastInput = value
-  
 end
 
 
 function helpers.dec2hex( num )
+
+  -- returns string
   return ("%X"):format(math.abs(num))
 end
 
@@ -45,12 +46,11 @@ function helpers.validateAddress(mem,address,ct)
   
   if ffi.istype(ct, address) then
     addressPtr = address
-    else
+  else
     addressPtr = ffi.cast(ct, mem + bit.band(address, 0x1fffff))
   end
   
   return addressPtr, addressPtr[0]
-  
 end
 
 
@@ -67,17 +67,16 @@ function helpers.addBpWithCondition(mem, address, width, cause, condition)
   
   helpers[cause] = PCSX.addBreakpoint( address, 'Write', width, cause , function()
     
-    local regs = PCSX.getRegisters()
-    local pc = regs.pc
+  local regs = PCSX.getRegisters()
+  local pc = regs.pc
     
-    local pc_ptr, value = helpers.validateAddress(mem,pc,'uint32_t*')
+  local pc_ptr, value = helpers.validateAddress(mem,pc,'uint32_t*')
     
-    local regIndex = bit.band( bit.rshift(value , 16), 0x1f )
-    local regValue = PCSX.getRegisters().GPR.r[regIndex]               -- array starts at 0
+  local regIndex = bit.band( bit.rshift(value , 16), 0x1f )
+  local regValue = PCSX.getRegisters().GPR.r[regIndex]               -- array starts at 0
     
-    if regValue == condition then PCSX.pauseEmulator(); PCSX.GUI.jumpToPC(pc) end
+  if regValue == condition then PCSX.pauseEmulator(); PCSX.GUI.jumpToPC(pc) end
   end)
-  
 end
 
 
@@ -139,7 +138,7 @@ end
 function helpers.insert_string(mem,address,size,tbl,text)
   
   -- Inserts string into game memory using the a text table file
-  -- the size parameter is used for zeroing out the following btyes and to prevent overflow 
+  -- bytes ahead are cleared
   -- 0xE7 is the string terminator for Vagrant Story
   local addressPtr = ffi.cast('uint8_t*', mem + bit.band(address, 0x1fffff))
   
@@ -148,9 +147,9 @@ function helpers.insert_string(mem,address,size,tbl,text)
   for i=0,size,1 do
     if #text -i > 0 then
       addressPtr[i] = helpers.returnKey( tbl, string.sub(text,i+1,i+1) )
-      elseif #text -i == 0 and #text ~= 0 then
+    elseif #text -i == 0 and #text ~= 0 then
       addressPtr[i] = 0xE7
-      else
+    else
       addressPtr[i] = 0
     end
   end
@@ -161,11 +160,10 @@ helpers.frozenAddresses = {}
 
 function helpers.addFreeze(mem,address,value)
   
-  -- Add a address to the frozenAddresses table, value is optional
-  address = bit.band(address, 0x1fffff)
-  local pointer = ffi.cast('uint8_t*', mem + address)
-  local value = value or pointer[0]
-  helpers.frozenAddresses[address] = { pointer, value }
+  -- Add a address to the frozenAddresses table, a value to be frozen at is optional
+  local addressPtr, cur_value = helpers.validateAddress(mem,address,'uint8_t*')
+  local value = value or cur_value
+  helpers.frozenAddresses[address] = { addressPtr, value }
 end 
 
 
@@ -181,5 +179,6 @@ function helpers.doFreeze()
     end
   end
 end
+
 
 return helpers
