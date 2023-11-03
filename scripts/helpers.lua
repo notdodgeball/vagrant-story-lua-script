@@ -40,17 +40,12 @@ end
 
 
 function helpers.validateAddress(mem,address,ct)
-  
-  -- istype checks if it's already a pointer
-  local addressPtr
-  
-  if ffi.istype(ct, address) then
-    addressPtr = address
-  else
-    addressPtr = ffi.cast(ct, mem + bit.band(address, 0x1fffff))
-  end
-  
-  return addressPtr, addressPtr[0]
+
+  --ffi.istype(ct, address)
+  local address = bit.band(address, 0x1fffff)
+  local addressPtr = ffi.cast(ct, mem + address)
+ 
+  return addressPtr, addressPtr[0], address
 end
 
 
@@ -160,8 +155,8 @@ helpers.frozenAddresses = {}
 
 function helpers.addFreeze(mem,address,value)
   
-  -- Add a address to the frozenAddresses table, a value to be frozen at is optional
-  local addressPtr, cur_value = helpers.validateAddress(mem,address,'uint8_t*')
+  -- Add a address to the frozenAddresses table, value is optional
+  local addressPtr, cur_value, address = helpers.validateAddress(mem,address,'uint8_t*')
   local value = value or cur_value
   helpers.frozenAddresses[address] = { addressPtr, value }
 end 

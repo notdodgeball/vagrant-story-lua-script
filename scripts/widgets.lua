@@ -111,7 +111,7 @@ end
 -- these two below save and load uncompressed files and therefore are incompatible with saves created from the pcsx interface
 
 function widgets.drawSaveButton(saveName)
-  if imgui.Button('Save') and not isEmpty(saveName) then
+  if imgui.Button('Save') and not h.isEmpty(saveName) then
     local save = PCSX.createSaveState()
     local file = Support.File.open(saveName, 'TRUNCATE')
     if not file:failed() then
@@ -124,7 +124,7 @@ end
 
 
 function widgets.drawLoadButton(saveName)
-  if imgui.Button('Load') and not isEmpty(saveName) then
+  if imgui.Button('Load') and not h.isEmpty(saveName) then
     local file = Support.File.open(saveName, 'READ')
     if not file:failed() then
       PCSX.loadSaveState(file)
