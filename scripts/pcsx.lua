@@ -103,7 +103,9 @@ function DrawImguiFrame()
         for k, v in pairs(h.frozenAddresses) do
           if imgui.SmallButton('x##'..k) then h.frozenAddresses[k] = nil end
           imgui.SameLine();
-          imgui.Selectable( ("8%.7X"):format(math.abs(k)) .. ' - ' .. h.dec2hex( v[2] )   )
+          if imgui.Selectable(("8%.7X"):format(math.abs(k)) .. ' - ' .. h.dec2hex( v[2] )) then
+            PCSX.GUI.jumpToMemory(k)
+          end
         end
         imgui.EndListBox()
       end

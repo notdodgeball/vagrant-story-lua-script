@@ -25,10 +25,18 @@ end
 function widgets.drawSlider(mem, address, name, ct, min, max)
   
   -- works nicely with min>max in cases where the logic is reversed
-  local addressPtr, value = h.validateAddress(mem,address,ct)
-  local changed, value = imgui.SliderInt(name, value, min, max, '%d')
+  local addressPtr, value, address = h.validateAddress(mem,address,ct)
+  local changed, value = imgui.SliderInt(name, value, min, max, '%d', imgui.constant.SliderFlags.AlwaysClamp)
+    
+  imgui.SameLine();
+  ccc, widgets[name] = imgui.Checkbox('Freeze?##'.. name, widgets[name])
   
-  if changed then addressPtr[0] = value end
+  if ccc then
+    print(1)
+    if widgets[name] then h.addFreeze(mem,address,ct,value) else h.frozenAddresses[address] = nil end
+  end
+
+  if changed and not widgets[name] then addressPtr[0] = value end -- h.canFreeze
   
 end
 
