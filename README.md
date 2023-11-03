@@ -1,8 +1,10 @@
 # vagrant-story-lua-script
 A collection of scripts to be used with the [PCSX-Redux emulator](https://pcsx-redux.consoledev.net/) for the game Vagrant Story. While being nothing special, it's being published here to help others wanting to learn the basics of using the lua scripting capabilities of said emulator.
 
-You will be able to display and edit values like Ashley's speed and coordinates, insert and decode text from memory, load any room, add any item, and freeze and unfreeze memory addresses.
+It can display and edit values like Ashley's speed and coordinates, insert and decode text from memory, load any room, add any item, and freeze and unfreeze memory addresses.
 All files go to the main pcsx folder.
+
+Released in a beta state, bugs included.
 
 __pcsx.lua__ is the main file and the one executed by the emulator.
 
