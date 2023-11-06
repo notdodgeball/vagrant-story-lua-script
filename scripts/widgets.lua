@@ -29,10 +29,9 @@ function widgets.drawSlider(mem, address, name, ct, min, max)
   local changed, value = imgui.SliderInt(name, value, min, max, '%d', imgui.constant.SliderFlags.AlwaysClamp)
     
   imgui.SameLine();
-  ccc, widgets[name] = imgui.Checkbox('Freeze?##'.. name, widgets[name])
+  ccc, widgets[name] = imgui.Checkbox('Freeze##'.. name, widgets[name])
   
   if ccc then
-    print(1)
     if widgets[name] then h.addFreeze(mem,address,ct,value) else h.frozenAddresses[address] = nil end
   end
 
@@ -46,7 +45,16 @@ function widgets.drawSliderLoop(mem, address, name, ct, min, max, range)
   -- same as drawSlider, also changes the bytes ahead, defined by range
   local addressPtr, value = h.validateAddress(mem,address,ct)
   local changed, value = imgui.SliderInt(name, value, min, max, '%d')
+
+  imgui.SameLine();
+  ccc, widgets[name] = imgui.Checkbox('Freeze##'.. name, widgets[name])
   
+  if ccc then
+    for i=0,range,1 do
+      if widgets[name] then h.addFreeze(mem,address+2*i,ct,value) else h.frozenAddresses[address+2*i] = nil end
+    end
+  end
+
   if changed then
     for i=0,range,1 do
       addressPtr[i] = value

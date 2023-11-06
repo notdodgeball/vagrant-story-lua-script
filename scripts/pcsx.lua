@@ -69,6 +69,7 @@ function DrawImguiFrame()
       w.drawSlider(mem, curSpeed, 'CurSpeed', 'uint8_t*', 0, 40)
       w.drawSlider(mem, strength, 'STR', 'uint8_t*', 0, 255)
       w.drawSliderLoop(mem, ashleySize , 'Size AS', 'int16_t*', 512, 14000, 2)
+      w.drawSliderLoop(mem, bossSize , 'Size M', 'int16_t*', 512, 14000, 2)
       
       -- Better than using a table actually
       imgui.SeparatorText('Coordinates')
