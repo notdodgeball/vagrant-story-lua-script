@@ -30,6 +30,23 @@ text_t = { [0]= --starts at zero
 }
 
 
+-- ffi.sizeof wont work cause all pointers are 8 byte long
+
+ctSize_t = {}
+
+ctSize_t['__int8'] = 1;   ctSize_t['__int8*'] = 1
+ctSize_t['int8_t'] = 1;   ctSize_t['int8_t*'] = 1
+ctSize_t['uint8_t'] = 1;  ctSize_t['uint8_t*'] = 1
+
+ctSize_t['__int16'] = 2;  ctSize_t['__int16*'] = 2
+ctSize_t['int16_t'] = 2;  ctSize_t['int16_t*'] = 2
+ctSize_t['uint16_t'] = 2; ctSize_t['uint16_t*'] = 2
+
+ctSize_t['__int32'] = 4;  ctSize_t['__int32*'] = 4
+ctSize_t['int32_t'] = 4;  ctSize_t['int32_t*'] = 4
+ctSize_t['uint32_t'] = 4; ctSize_t['uint32_t*'] = 4
+
+
 items_t = {}
 items_t[0x43] = "Cure Root";            items_t[0x44] = "Cure Bulb";
 items_t[0x45] = "Cure Tonic";           items_t[0x46] = "Cure Potion";

@@ -42,13 +42,13 @@ local canMoonJump     = false
 local hexFlags        =  bit.bor ( 
   bit.bor( imgui.constant.InputTextFlags.CharsHexadecimal , imgui.constant.InputTextFlags.CharsNoBlank )
   , bit.bor( imgui.constant.InputTextFlags.EnterReturnsTrue , imgui.constant.InputTextFlags.CharsUppercase )
-)
+  )
 
 local file = Support.File.open('s1', 'READ')
 if not file:failed() then
   PCSX.loadSaveState(file)
   print('Loaded file ' .. 's1')
-end
+  end
 file:close()
 
 _vsync = PCSX.Events.createEventListener('GPU::Vsync', h.doFreeze )
@@ -68,8 +68,8 @@ function DrawImguiFrame()
       w.drawSlider(mem, maxSpeed , 'MaxSpeed', 'uint8_t*', 0, 40)
       w.drawSlider(mem, curSpeed, 'CurSpeed', 'uint8_t*', 0, 40)
       w.drawSlider(mem, strength, 'STR', 'uint8_t*', 0, 255)
-      w.drawSliderLoop(mem, ashleySize , 'Size AS', 'int16_t*', 512, 14000, 2)
-      w.drawSliderLoop(mem, bossSize , 'Size M', 'int16_t*', 512, 14000, 2)
+      w.drawSlider(mem, ashleySize , 'Size AS', 'int16_t*', 512, 14000, 2)
+      w.drawSlider(mem, bossSize , 'Size M', 'int16_t*', 512, 14000, 2)
       
       -- Better than using a table actually
       imgui.SeparatorText('Coordinates')
@@ -90,7 +90,8 @@ function DrawImguiFrame()
       end
       
       imgui.SeparatorText('Freeze')
-      _, h.canFreeze = imgui.Checkbox('Enable freeze', h.canFreeze)
+      _, h.canFreeze = imgui.Checkbox('Enable?', h.canFreeze)
+      imgui.SameLine();
       
       imgui.SetNextItemWidth(100); 
       local changed, freezeValue = imgui.extra.InputText('Add address', '' , hexFlags )
@@ -104,7 +105,7 @@ function DrawImguiFrame()
         for k, v in pairs(h.frozenAddresses) do
           if imgui.SmallButton('x##'..k) then h.frozenAddresses[k] = nil end
           imgui.SameLine();
-          if imgui.Selectable(("8%.7X"):format(math.abs(k)) .. ' - ' .. h.dec2hex( v[2] )) then
+          if imgui.Selectable(("8%.7X"):format(math.abs(k)) .. ' - ' .. h.dec2hex( v[3] )) then
             PCSX.GUI.jumpToMemory(k)
           end
         end

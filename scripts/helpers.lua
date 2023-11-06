@@ -169,7 +169,7 @@ function helpers.addFreeze(mem,address,ct,value)
   
   if not helpers.frozenAddresses[address] then 
     local value = value or cur_value
-    helpers.frozenAddresses[address] = { addressPtr, value }
+    helpers.frozenAddresses[address] = { true, addressPtr, value }
   end
 end 
 
@@ -182,7 +182,7 @@ function helpers.doFreeze()
   -- PCSX.Events.createEventListener('GPU::Vsync', helpers.doFreeze )
   if helpers.canFreeze then 
     for k, v in pairs(helpers.frozenAddresses) do
-      v[1][0] = v[2] -- pointer[0] = value
+      v[2][0] = v[3] -- pointer[0] = value
     end
   end
 end

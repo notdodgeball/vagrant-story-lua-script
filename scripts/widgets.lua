@@ -22,40 +22,38 @@ function widgets.drawCheckbox(mem, address, name, valueOn, valueOff, isReadOnly)
 end
 
 
-function widgets.drawSlider(mem, address, name, ct, min, max)
-  
-  -- works nicely with min>max in cases where the logic is reversed
-  local addressPtr, value, address = h.validateAddress(mem,address,ct)
-  local changed, value = imgui.SliderInt(name, value, min, max, '%d', imgui.constant.SliderFlags.AlwaysClamp)
-    
-  imgui.SameLine();
-  ccc, widgets[name] = imgui.Checkbox('Freeze##'.. name, widgets[name])
-  
-  if ccc then
-    if widgets[name] then h.addFreeze(mem,address,ct,value) else h.frozenAddresses[address] = nil end
-  end
+function widgets.drawFreezeCheck(mem, address, name, ct, range)
 
-  if changed and not widgets[name] then addressPtr[0] = value end -- h.canFreeze
+  -- ctSize_t[ct] Returns the size of ct in bytes
+  local isFrozen
+  if h.frozenAddresses[address] then isFrozen = true else isFrozen = false end
+  if not h.canFreeze then imgui.BeginDisabled() end
+  local changed, isFrozen = imgui.Checkbox('Freeze##'.. name, isFrozen )
+  if not h.canFreeze then imgui.EndDisabled() end
+
+  if changed then
+    for i=0, range*ctSize_t[ct], ctSize_t[ct] do
+      if isFrozen then h.addFreeze(mem,address+i,ct,value) else h.frozenAddresses[address+i] = nil end
+    end
+  end
   
+  return isFrozen
 end
 
 
-function widgets.drawSliderLoop(mem, address, name, ct, min, max, range)
+function widgets.drawSlider(mem, address, name, ct, min, max, range)
   
-  -- same as drawSlider, also changes the bytes ahead, defined by range
-  local addressPtr, value = h.validateAddress(mem,address,ct)
-  local changed, value = imgui.SliderInt(name, value, min, max, '%d')
+  -- works nicely with min>max in cases where the logic is reversed
+  -- also changes the bytes ahead, defined by range
+
+  local range = range or 0
+  local addressPtr, value, address = h.validateAddress(mem,address,ct)
+  local changed, value = imgui.SliderInt(name, value, min, max, '%d', imgui.constant.SliderFlags.AlwaysClamp)
 
   imgui.SameLine();
-  ccc, widgets[name] = imgui.Checkbox('Freeze##'.. name, widgets[name])
-  
-  if ccc then
-    for i=0,range,1 do
-      if widgets[name] then h.addFreeze(mem,address+2*i,ct,value) else h.frozenAddresses[address+2*i] = nil end
-    end
-  end
+  isFrozen = widgets.drawFreezeCheck(mem, address, name, ct, range)
 
-  if changed then
+  if changed and not isFrozen then
     for i=0,range,1 do
       addressPtr[i] = value
     end
