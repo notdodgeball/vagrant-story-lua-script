@@ -28,7 +28,7 @@ local strength        = 0x8011FA62
 local ashleySize      = 0x801203D0
 local bossSize        = 0x80181550
 
-local itemCount       = 0
+local itemCount       = 255
 local itemId          = 0x80060F68
 local itemQtd         = 0x80060F6A
 local itemIdPtr       = ffi.cast('uint8_t*', mem + bit.band(itemId, 0x1fffff))
@@ -146,11 +146,13 @@ function DrawImguiFrame()
     if imgui.BeginTabItem('Items') then
       
       if imgui.BeginListBox( '##Item' ) then
-        for i=0,255,4 do
+        for i=0, itemCount, 4 do
           id = itemIdPtr[i]
-          if id < 0x43 then itemCount = i; break end
-          imgui.SetNextItemWidth(80);
-          w.drawInputInt(mem, itemQtdPtr+i , items_t[ id ], 'uint8_t*' ) 
+          if id > 0x43 then
+            itemCount = i+4
+            imgui.SetNextItemWidth(80)
+            w.drawInputInt(mem, itemQtdPtr+i , items_t[ id ], 'uint8_t*' ) 
+          end
         end
         imgui.EndListBox()
       end
