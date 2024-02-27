@@ -64,7 +64,7 @@ end
 
 function widgets.drawMemory(mem, address, bytes, range)
 	
-	local range = range or 144
+	local range = range or 143
 	local ct = ''
 	local formato = ''
 	
@@ -77,11 +77,11 @@ function widgets.drawMemory(mem, address, bytes, range)
 	end
 	
 	local addressPtr, value, address = h.validateAddress(mem,address,ct)
-	local text = h.dec2hex(address, '%08X') .. ': '
+	local text = ''
 	
-	for i=1,range,1 do
-		text =  text .. h.dec2hex( addressPtr[i-1] , formato )  .. ' ' 
-		if math.fmod(i,16) == 0 and i < range then text = text .. '\n' .. h.dec2hex(address+i*bytes, '%08X') .. ': ' end
+	for i=0,range,1 do
+		if math.fmod(i,16) == 0 then text = text .. '\n' .. h.dec2hex(address+i*bytes, '%08X') .. ': ' end
+		text =  text .. h.dec2hex( addressPtr[i] , formato )  .. ' ' 
 	end
 	
 	-- imgui.safe.BeginListBox('Address', function()
