@@ -32,7 +32,7 @@ function widgets.drawFreezeCheck(mem, address, name, ct, range)
   if not h.canFreeze then imgui.EndDisabled() end
 
   if changed then
-    for i=0, range*ctSize_t[ct], ctSize_t[ct] do
+    for i=0, range*h.ctSize_t[ct], h.ctSize_t[ct] do
       if isFrozen then h.addFreeze(mem,address+i,ct,value) else h.frozenAddresses[address+i] = nil end
     end
   end
@@ -59,6 +59,43 @@ function widgets.drawSlider(mem, address, name, ct, min, max, range)
     end
   end
   
+end
+
+
+function widgets.drawMemory(mem, address, bytes, range)
+	
+	local range = range or 144
+	local ct = ''
+	local formato = ''
+	
+	if bytes == 1 then 
+		ct = 'uint8_t*'
+		formato = '%02X'
+	elseif bytes == 2 then
+		ct = 'uint16_t*'
+		formato = '%04X'
+	end
+	
+	local addressPtr, value, address = h.validateAddress(mem,address,ct)
+	local text = h.dec2hex(address, '%08X') .. ': '
+	
+	for i=1,range,1 do
+		text =  text .. h.dec2hex( addressPtr[i-1] , formato )  .. ' ' 
+		if math.fmod(i,16) == 0 and i < range then text = text .. '\n' .. h.dec2hex(address+i*bytes, '%08X') .. ': ' end
+	end
+	
+	-- imgui.safe.BeginListBox('Address', function()
+	PCSX.GUI.useMonoFont()
+	imgui.TextUnformatted( text )
+	imgui.PopFont()
+	-- end)
+	
+	if imgui.Button('Copy')  then
+		imgui.LogToClipboard()
+		imgui.extra.logText(text)
+		imgui.LogFinish()
+	end
+	
 end
 
 

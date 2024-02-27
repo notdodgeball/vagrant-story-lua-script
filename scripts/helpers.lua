@@ -1,5 +1,22 @@
 local helpers = {}
 
+-- ffi.sizeof doesn't work with pointers cause all pointers are 8 byte long
+
+helpers.ctSize_t = {
+ ['__int8'] = 1,   ['__int8*'] = 1
+,['int8_t'] = 1,   ['int8_t*'] = 1
+,['uint8_t'] = 1,  ['uint8_t*'] = 1
+
+,['__int16'] = 2,  ['__int16*'] = 2
+,['int16_t'] = 2,  ['int16_t*'] = 2
+,['uint16_t'] = 2, ['uint16_t*'] = 2
+
+,['__int32'] = 4,  ['__int32*'] = 4
+,['int32_t'] = 4,  ['int32_t*'] = 4
+,['uint32_t'] = 4, ['uint32_t*'] = 4
+}
+
+
 local lastInput = 0
 local input_t = {}
 input_t[0x0001] = 'L2';       input_t[0x0002] = 'R2'
@@ -32,10 +49,11 @@ function helpers.inputLogger(mem, address)
 end
 
 
-function helpers.dec2hex( num )
+function helpers.dec2hex( num, format)
 
   -- returns string
-  return ("%X"):format(math.abs(num))
+  format = format or "%X"
+  return (format):format(math.abs(num))
 end
 
 

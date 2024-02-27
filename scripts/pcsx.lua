@@ -11,6 +11,8 @@ local mem             = PCSX.getMemPtr()
 local areaDesc        = 'Select area'
 local areaId          = 0
 
+local memWatch        = '800000A0'
+local memWatchInt     = tonumber(memWatch, 16)
 local joker           = 0x8005E1C0 -- 0x8005E238
 local mode            = 0x8011FA10
 local loadRoom        = 0x0F1A48
@@ -43,6 +45,10 @@ local hexFlags        =  bit.bor (
   bit.bor( imgui.constant.InputTextFlags.CharsHexadecimal , imgui.constant.InputTextFlags.CharsNoBlank )
   , bit.bor( imgui.constant.InputTextFlags.EnterReturnsTrue , imgui.constant.InputTextFlags.CharsUppercase )
   )
+local tableFlags     =  bit.bor ( 
+  bit.bor( imgui.constant.TableFlags.NoSavedSettings , imgui.constant.TableFlags.NoSavedSettings ) --Resizable
+  , bit.bor( imgui.constant.TableFlags.NoPadOuterX   , imgui.constant.TableFlags.NoPadInnerX )
+)
 
 local file = Support.File.open('s1', 'READ')
 if not file:failed() then
@@ -53,18 +59,17 @@ file:close()
 
 _vsync = PCSX.Events.createEventListener('GPU::Vsync', h.doFreeze )
 
+
 function DrawImguiFrame()
   
-  local show = imgui.Begin('Command', true)
-  if not show then imgui.End() return end
-  
+  imgui.safe.Begin('Command', true, function()
+    
   h.inputLogger(mem,joker)
   
-  if imgui.BeginTabBar('MainBar') then
-    
+  imgui.safe.BeginTabBar('MainBar', true, function()
 
-    if imgui.BeginTabItem('Values') then
-      
+    imgui.safe.BeginTabItem('Values', function()
+
       w.drawSlider(mem, maxSpeed , 'MaxSpeed', 'uint8_t*', 0, 40)
       w.drawSlider(mem, curSpeed, 'CurSpeed', 'uint8_t*', 0, 40)
       w.drawSlider(mem, strength, 'STR', 'uint8_t*', 0, 255)
@@ -73,12 +78,22 @@ function DrawImguiFrame()
       
       -- Better than using a table actually
       imgui.SeparatorText('Coordinates')
-      imgui.SetNextItemWidth(90); w.drawInputInt(mem, posX, 'X', 'int16_t*')
-      imgui.SameLine();           w.drawSlider(mem, posX, '##x', 'int16_t*', -2500, 2500)
-      imgui.SetNextItemWidth(90); w.drawInputInt(mem, posY, 'Y', 'int16_t*')
-      imgui.SameLine();           w.drawSlider(mem, posY, '##y', 'int16_t*', -2500, 2500)
-      imgui.SetNextItemWidth(90); w.drawInputInt(mem, posZ, 'Z', 'int16_t*', 1, true)
-      imgui.SameLine();           w.drawSlider(mem, posZ, '##z', 'int16_t*', 150, -500)
+      
+      imgui.safe.BeginTable('Tabless', 2, tableFlags, function() 
+         imgui.TableSetupColumn('' , imgui.constant.TableColumnFlags.WidthFixed, 136 ) 
+         imgui.TableSetupColumn('' )
+
+         -- imgui.TableHeadersRow()
+         imgui.TableNextColumn(); w.drawInputInt(mem, posX, 'X', 'int16_t*')
+         imgui.TableNextColumn(); w.drawSlider(mem, posX, '##x', 'int16_t*', -2500, 2500)
+         imgui.TableNextRow()
+         imgui.TableNextColumn(); w.drawInputInt(mem, posY, 'Y', 'int16_t*')
+         imgui.TableNextColumn(); w.drawSlider(mem, posY, '##y', 'int16_t*', -2500, 2500)
+         imgui.TableNextRow()
+         imgui.TableNextColumn(); w.drawInputInt(mem, posZ, 'Z', 'int16_t*', 1, true)
+         imgui.TableNextColumn(); w.drawSlider(mem, posZ, '##z', 'int16_t*', 150, -500)
+        
+    end)
       
       imgui.SeparatorText('Checks')
       w.drawCheckbox(mem, mode, 'Battle Mode', 0x01, 0x00, true)
@@ -112,11 +127,10 @@ function DrawImguiFrame()
         imgui.EndListBox()
       end
       
-      imgui.EndTabItem()
-    end -- Values
+    end) --Values
     
     
-    if imgui.BeginTabItem('Rooms') then
+    imgui.safe.BeginTabItem('Rooms', function()
       
       if imgui.Button('Trigger Load Room:') and mem[loadRoom] == 0 then mem[loadRoom] = 2 end
       imgui.SameLine(); imgui.TextUnformatted( string.format( '%04X', roomIdToLoadPtr[0] ) )
@@ -139,11 +153,10 @@ function DrawImguiFrame()
         imgui.EndListBox()
       end
       
-      imgui.EndTabItem()
-    end --Rooms
+    end) --Rooms
     
     
-    if imgui.BeginTabItem('Items') then
+    imgui.safe.BeginTabItem('Items', function()
       
       if imgui.BeginListBox( '##Item' ) then
         for i=0, itemCount, 4 do
@@ -151,7 +164,7 @@ function DrawImguiFrame()
           if id > 0x43 then
             itemCount = i+4
             imgui.SetNextItemWidth(80)
-            w.drawInputInt(mem, itemQtdPtr+i , items_t[ id ], 'uint8_t*' ) 
+            w.drawInputInt(mem, itemQtdPtr+i , items_t[ id ], 'int8_t*' ) 
           end
         end
         imgui.EndListBox()
@@ -165,30 +178,36 @@ function DrawImguiFrame()
         imgui.EndCombo()
       end
       
-      imgui.EndTabItem()
-    end --Items
+    end) --Items
     
     
-    if imgui.BeginTabItem('Strings') then
+    imgui.safe.BeginTabItem('Strings', function()
       
       w.drawInputText(mem, currWeaponName, 'Weapon\'s name', 16 )
       w.drawInputText(mem, charName, 'Character\'s name', 16 )
       
-      imgui.EndTabItem()
-    end -- Strings
+    end) -- Strings
+
+    imgui.safe.BeginTabItem('Memory', function()
+      changedMen, memWatch = imgui.extra.InputText('Add address', memWatch , hexFlags)
+      if changedMen then
+        memWatchInt = tonumber(memWatch, 16)
+      end
+        w.drawMemory(mem,memWatchInt,2)
+    end)
     
-      
-    if imgui.BeginTabItem('Save/Load') then
+    imgui.safe.BeginTabItem('Save/Load', function()
       
       _, saveName = imgui.extra.InputText('save file name', saveName )
       w.drawSaveButton(saveName); imgui.SameLine(); w.drawLoadButton(saveName)
       
-      imgui.EndTabItem()
-    end -- Save/Load
+    end) -- Save/Load
     
     
-    imgui.EndTabBar()
-  end -- MainBar
+  end) -- MainBar
   
-  imgui.End()
+  -- imgui.End()
+  end)
 end
+
+
