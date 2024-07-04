@@ -17,7 +17,7 @@ local function nextSeed(value)
   return ((low + high * 0x10000) % 0x100000000) + 0x3039
 end
 
-w.seeds = { -1 } -- 0, [0]= 0, 0 
+w.seeds = { -1 } -- [0]= 0, 0 
 w.seedsOut = {  }
 
 -- Return current and upcoming (up to number) rng values
@@ -480,7 +480,7 @@ end
 
 function w.drawJumpButton(address)
 
-  -- display 
+  -- display button to jump to the address at the Memory Editor
   imgui.SameLine();
     if imgui.Button( '=>##' .. address ) then
        PCSX.GUI.jumpToMemory(address)
