@@ -179,10 +179,21 @@ function w.decode(mem,address,size,tbl)
   -- for ASCII, string.byte should work
   local addressPtr = ffi.cast('uint8_t*', mem + bit.band(address, 0x1fffff))
   local text = ''
+  local space = false
   
   for i=0,size,1 do
+
     local charIndex = addressPtr[0+i]
-    if charIndex ~= 0xE7 then text = text .. tbl[charIndex] else break end;
+    
+    if space == true then
+      space = false; text = text .. " ";
+    elseif charIndex == 0xFA then 
+      space=true
+    elseif charIndex ~= 0xE7 then 
+      text = text .. tbl[charIndex]
+    else
+      break
+    end;
   end
   
   return text
@@ -192,18 +203,21 @@ end
 function w.insert_string(mem,address,size,tbl,text)
   
   -- Inserts string into game memory using the a text table file
-  -- bytes ahead are cleared
-  -- 0xE7 is the string terminator for Vagrant Story
+
   local addressPtr = ffi.cast('uint8_t*', mem + bit.band(address, 0x1fffff))
   
+  -- Trim down to size
   text = string.sub(text,1,size-1)
   
   for i=0,size,1 do
     if #text -i > 0 then
+      -- returnKey uses a simple ipairs() and will return a space as 0x8F
       addressPtr[i] = w.returnKey( tbl, string.sub(text,i+1,i+1) )
     elseif #text -i == 0 and #text ~= 0 then
+      -- 0xE7 is the string terminator for Vagrant Story
       addressPtr[i] = 0xE7
     else
+      -- bytes ahead are cleared
       addressPtr[i] = 0
     end
   end
@@ -333,6 +347,9 @@ end
 -- Widget functions
 --========================================================
 
+w.fontsize = imgui.GetFontSize()
+
+
 function w.drawCheckbox(mem, address, name, valueOn, valueOff, isReadOnly)
   
   -- display only checkbox if isReadOnly is true, in which case valueOff is not even used
@@ -461,15 +478,34 @@ function w.drawRadio(mem, address, name )
 end
 
 
-function w.drawInputText(mem, address, name, size )
+function w.drawJumpButton(address)
+
+  -- display 
+  imgui.SameLine();
+    if imgui.Button( '=>##' .. address ) then
+       PCSX.GUI.jumpToMemory(address)
+    end
+
+  if imgui.IsItemHovered(imgui.constant.HoveredFlags.ForTooltip) and imgui.BeginTooltip() then
+      imgui.TextUnformatted('Jump to memory');
+    imgui.EndTooltip();
+  end
+
+end
+
+
+function w.drawInputText(mem, address, name, size)
   
   -- Last input is saved and used as hint
   local hint = w[address] or w.decode(mem,address,size,text_t)
-  local changed, value = imgui.extra.InputText(name, hint , imgui.constant.InputTextFlags.EnterReturnsTrue)
+  local changed, value = imgui.extra.InputText(name, hint, imgui.constant.InputTextFlags.EnterReturnsTrue)
+
   if changed then
     w.insert_string(mem,address,size,text_t,value)
     w[address] = value
   end
+
+  w.drawJumpButton(address)
   
 end
 
