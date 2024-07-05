@@ -116,6 +116,11 @@ local ctSize_t = {
 ,['uint32_t'] = 4, ['uint32_t*'] = 4
 }
 
+w.ctSize_t_inv = {
+ [1] = 'uint8_t*'
+,[2] = 'uint16_t*'
+,[4] = 'uint32_t*'
+}
 
 function w.dec2hex(num, format)
 
@@ -185,14 +190,14 @@ function w.decode(mem,address,size,tbl)
 
     local charIndex = addressPtr[0+i]
     
-    if space == true then
+    if space then
       space = false; text = text .. " ";
     elseif charIndex == 0xFA then 
-      space=true
+      space = true
     elseif charIndex ~= 0xE7 then 
       text = text .. tbl[charIndex]
     else
-      break
+      break -- == 0xE7
     end;
   end
   
@@ -430,10 +435,12 @@ function w.drawMemory(mem, address, bytes, range)
 end
 
 
-function w.drawInputInt(mem, address, name, ct, step, isReversed )
+function w.drawInputInt(mem, address, name, ct, step, isReversed, width )
   
   -- isReversed = true in the few cases in which the logic is reversed
   local step = step or 1
+  local width = width or 100
+  imgui.SetNextItemWidth(width);
   
   local addressPtr, value = w.validateAddress(mem,address,ct)
   local changed, value  = imgui.InputInt(name, value, step)
@@ -482,7 +489,7 @@ function w.drawJumpButton(address)
 
   -- display button to jump to the address at the Memory Editor
   imgui.SameLine();
-    if imgui.Button( '=>##' .. address ) then
+    if imgui.Button( '>##' .. address ) then
        PCSX.GUI.jumpToMemory(address)
     end
 
@@ -494,10 +501,13 @@ function w.drawJumpButton(address)
 end
 
 
-function w.drawInputText(mem, address, name, size)
+function w.drawInputText(mem, address, name, size, width)
   
   -- Last input is saved and used as hint
   local hint = w[address] or w.decode(mem,address,size,text_t)
+  local width = width or 200
+  imgui.SetNextItemWidth(width);
+  
   local changed, value = imgui.extra.InputText(name, hint, imgui.constant.InputTextFlags.EnterReturnsTrue)
 
   if changed then

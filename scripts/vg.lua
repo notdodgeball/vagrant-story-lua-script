@@ -3,6 +3,13 @@
 -- made by optrin
 --========================================================
 
+-- local file = Support.File.open('s1', 'READ')
+-- if not file:failed() then
+  -- PCSX.loadSaveState(file)
+  -- print('Loaded file ' .. 's1')
+  -- end
+-- file:close()
+
 p = require 'prt'
 w = require 'widgets'
 require 'map'
@@ -17,7 +24,7 @@ local joker           = 0x8005E1C0 -- 0x8005E238
 local mode            = 0x8011FA10
 local loadRoom        = 0x0F1A48
 local roomIdToLoad    = 0x800F1AB0
-local roomIdToLoadPtr = ffi.cast('uint16_t*', mem +  bit.band( roomIdToLoad, 0x1fffff))
+local roomIdToLoadPtr = ffi.cast('uint16_t*', mem +  bit.band(roomIdToLoad, 0x1fffff))
 
 local posX            = 0x801203C4
 local posY            = 0x801203C0
@@ -54,22 +61,20 @@ local hexFlags        =  bit.bor (
   bit.bor( imgui.constant.InputTextFlags.CharsHexadecimal , imgui.constant.InputTextFlags.CharsNoBlank )
   , bit.bor( imgui.constant.InputTextFlags.EnterReturnsTrue , imgui.constant.InputTextFlags.CharsUppercase )
   )
-local tableFlags     =  bit.bor ( 
+local tableFlags      =  bit.bor ( 
   bit.bor( imgui.constant.TableFlags.NoSavedSettings , imgui.constant.TableFlags.NoSavedSettings ) --Resizable
   , bit.bor( imgui.constant.TableFlags.NoPadOuterX   , imgui.constant.TableFlags.NoPadInnerX )
 )
 
-local size_bytes = 0
-local size_bytes_t = {8,16}
+local size_bytes      = 0
+local size_bytes_t    = {8,16}
 
--- local file = Support.File.open('s1', 'READ')
--- if not file:failed() then
-  -- PCSX.loadSaveState(file)
-  -- print('Loaded file ' .. 's1')
-  -- end
--- file:close()
+local actorPointer    = 0x8011f9f0
+local actorPointerPtr = ffi.cast('uint32_t*', mem +  bit.band(actorPointer, 0x1fffff))
+local actors          = {actorPointerPtr,actorPointerPtr,actorPointerPtr,actorPointerPtr}
 
 _vsync = PCSX.Events.createEventListener('GPU::Vsync', w.doFreeze )
+-- imgui.constant.TabItemFlags.SetSelected
 
 function DrawImguiFrame()
   
@@ -79,13 +84,52 @@ function DrawImguiFrame()
     
     imgui.safe.BeginTabBar('MainBar', true, function()
 
-      imgui.safe.BeginTabItem('Values', function()
+      imgui.safe.BeginTabItem('Actors', function()
+        
+        imgui.safe.BeginTabBar('ActorsChild', imgui.constant.TabBarFlags.TabListPopupButton, function()
+        local actorCount = 1
+          repeat
+            imgui.safe.BeginTabItem(actorCount, function()
+            
+              -- imgui.safe.BeginTable('Actor Table##'..actorCount, 2, tableFlags, function() 
+                -- imgui.TableSetupColumn('' , imgui.constant.TableColumnFlags.WidthFixed, 136 ) 
+                -- imgui.TableSetupColumn('')
+
+                for k, v in ipairs(actorOffsets) do
+                  local curAddress = actors[actorCount][0] + v.offset
+                  local curaddressPtr, curValue = w.validateAddress( mem, curAddress, w.ctSize_t_inv[v.size] )
+                  
+                  -- imgui.TableNextColumn(); imgui.Selectable( v.name )
+                  -- imgui.TableNextColumn()
+                  if v.text then
+                    w.drawInputText(mem, curAddress, v.name, 24 )
+                  else
+                    w.drawInputInt(mem, curAddress, v.name, w.ctSize_t_inv[v.size])
+                  end
+                  -- imgui.TableNextRow()
+                end
+                
+                -- Pointer to the next actor
+                local nextActor    = actors[actorCount][0]
+                local nextActorPtr = ffi.cast('uint32_t*', mem +  bit.band( nextActor , 0x1fffff))
+                actors[actorCount+1] = nextActorPtr
+
+              -- end) -- Actor Table
+            end) -- actorCount TabItem
+          actorCount = actorCount + 1
+          until actors[actorCount][0] == 0 or actorCount == 4
+          
+        end) -- ActorsChild TabBar
+
+      end) -- Actor
+    
+      imgui.safe.BeginTabItem('Ashley', function()
 
         w.drawSlider(mem, maxSpeed , 'MaxSpeed', 'uint8_t*', 0, 40)
         w.drawSlider(mem, curSpeed, 'CurSpeed', 'uint8_t*', 0, 40)
         w.drawSlider(mem, strength, 'STR', 'uint8_t*', 0, 255)
         w.drawSlider(mem, ashleySize , 'Size AS', 'int16_t*', 512, 14000, 2)
-        w.drawSlider(mem, bossSize , 'Size M', 'int16_t*', 512, 14000, 2)
+        w.drawSlider(mem, bossSize, ' Size M', 'int16_t*', 512, 14000, 2)
         
         imgui.SeparatorText('Coordinates')
         imgui.safe.BeginTable('TableCoordinates', 2, tableFlags, function() 
@@ -112,19 +156,10 @@ function DrawImguiFrame()
           if PCSX.SIO0.slots[1].pads[1].getButton(square) then posZPtr[0] = posZPtr[0] - 20 end
         end
         
-        imgui.SeparatorText('Freeze')
-        _, w.canFreeze = imgui.Checkbox('Enable?', w.canFreeze)
-        imgui.SameLine();
-
-        imgui.SetNextItemWidth(100); 
-        local changedFre, freezeValue = imgui.extra.InputText('Add address', '' , hexFlags )
-        if changedFre and not w.isEmpty(freezeValue) then
-          local freezeNumber = tonumber(freezeValue, 16)
-          w.addFreeze(mem,freezeNumber)
-        end
+        imgui.SeparatorText('Strings')
         
-        imgui.SetNextItemWidth(280);
-        w.DrawFrozen()
+        w.drawInputText(mem, currWeaponName, 'Weapon\'s name', 16 )
+        w.drawInputText(mem, charName, 'Character\'s name', 16 )
         
       end) --Values
       
@@ -177,12 +212,22 @@ function DrawImguiFrame()
       end) --Items
       
       
-      imgui.safe.BeginTabItem('Strings', function()
+      imgui.safe.BeginTabItem('Freeze', function()
         
-        w.drawInputText(mem, currWeaponName, 'Weapon\'s name', 16 )
-        w.drawInputText(mem, charName, 'Character\'s name', 16 )
+        _, w.canFreeze = imgui.Checkbox('Enable?', w.canFreeze)
+        imgui.SameLine();
+
+        imgui.SetNextItemWidth(100); 
+        local changedFre, freezeValue = imgui.extra.InputText('Add address', '' , hexFlags )
+        if changedFre and not w.isEmpty(freezeValue) then
+          local freezeNumber = tonumber(freezeValue, 16)
+          w.addFreeze(mem,freezeNumber)
+        end
         
-      end) -- Strings
+        imgui.SetNextItemWidth(280);
+        w.DrawFrozen()
+        
+      end) -- Freeze
 
 
       imgui.safe.BeginTabItem('Memory', function()
@@ -201,7 +246,7 @@ function DrawImguiFrame()
         _, saveName = imgui.extra.InputText('save file name', saveName )
         w.drawSaveButton(saveName); imgui.SameLine(); w.drawLoadButton(saveName)
 
-      end) -- Save/Load
+      end) -- Save/Load      
       
     end) -- MainBar
 

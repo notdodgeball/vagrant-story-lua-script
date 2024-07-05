@@ -1,5 +1,26 @@
 -- Text, area, zone and room info from Datacrystal
 
+-- the ofset is not the key cause we need the guaranteed ordering of ipairs()
+actorOffsets = {
+--  { offset = 0x0  , name = 'next'         , size = 4 }
+--, { offset = 0x2c , name = 'X_coordinate' , size = 2 }
+--, { offset = 0x2e , name = 'Y_coordinate' , size = 2 }
+  { offset = 0x50 , name = 'Name'         , size = 2 , text = true } --24
+, { offset = 0x68 , name = 'CurrentHP'    , size = 2 }
+, { offset = 0x6a , name = 'MaxHP'        , size = 2 }
+, { offset = 0x6c , name = 'Current MP'   , size = 2 }
+, { offset = 0x6e , name = 'MaxMP'        , size = 2 }
+, { offset = 0x70 , name = 'RISK'         , size = 2 }
+, { offset = 0x72 , name = 'Original STR' , size = 2 }
+, { offset = 0x74 , name = 'Equipped STR' , size = 2 }
+, { offset = 0x76 , name = 'Original INT' , size = 2 }
+, { offset = 0x78 , name = 'Equipped INT' , size = 2 }
+, { offset = 0x7a , name = 'Original AGL' , size = 2 }
+, { offset = 0x7c , name = 'Equipped AGL' , size = 2 }
+, { offset = 0x8c , name = 'Weapon Name'  , size = 2 , text = true } --24
+}
+
+
 text_t = { [0]= --starts at zero
   '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F',  
   'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V',  
