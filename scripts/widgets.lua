@@ -195,7 +195,7 @@ function w.decode(mem,address,size,tbl)
     elseif charIndex == 0xFA then 
       space = true
     elseif charIndex ~= 0xE7 then 
-      text = text .. tbl[charIndex]
+      if tbl[charIndex] ~= nil then text = text .. tbl[charIndex] end
     else
       break -- == 0xE7
     end;

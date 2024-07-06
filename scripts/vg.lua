@@ -88,7 +88,7 @@ function DrawImguiFrame()
         
         imgui.safe.BeginTabBar('ActorsChild', imgui.constant.TabBarFlags.TabListPopupButton, function()
         local actorCount = 1
-          repeat
+          while actors[actorCount][0] ~= 0 and actorCount < 4 do
             imgui.safe.BeginTabItem(actorCount, function()
             
               -- imgui.safe.BeginTable('Actor Table##'..actorCount, 2, tableFlags, function() 
@@ -102,7 +102,7 @@ function DrawImguiFrame()
                   -- imgui.TableNextColumn(); imgui.Selectable( v.name )
                   -- imgui.TableNextColumn()
                   if v.text then
-                    w.drawInputText(mem, curAddress, v.name, 24 )
+                    w.drawInputText(mem, curAddress, v.name, 23 )
                   else
                     w.drawInputInt(mem, curAddress, v.name, w.ctSize_t_inv[v.size])
                   end
@@ -117,7 +117,7 @@ function DrawImguiFrame()
               -- end) -- Actor Table
             end) -- actorCount TabItem
           actorCount = actorCount + 1
-          until actors[actorCount][0] == 0 or actorCount == 4
+          end
           
         end) -- ActorsChild TabBar
 
