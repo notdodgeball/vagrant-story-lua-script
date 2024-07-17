@@ -60,21 +60,25 @@ local canMoonJump     = false
 local hexFlags        =  bit.bor ( 
   bit.bor( imgui.constant.InputTextFlags.CharsHexadecimal , imgui.constant.InputTextFlags.CharsNoBlank )
   , bit.bor( imgui.constant.InputTextFlags.EnterReturnsTrue , imgui.constant.InputTextFlags.CharsUppercase )
-  )
+)
+
 local tableFlags      =  bit.bor ( 
-  bit.bor( imgui.constant.TableFlags.NoSavedSettings , imgui.constant.TableFlags.NoSavedSettings ) --Resizable
+  bit.bor( imgui.constant.TableFlags.NoSavedSettings , imgui.constant.TableFlags.NoClip ) --Resizable
   , bit.bor( imgui.constant.TableFlags.NoPadOuterX   , imgui.constant.TableFlags.NoPadInnerX )
 )
 
+local tabFlags        = bit.bor ( imgui.constant.TabBarFlags.TabListPopupButton , imgui.constant.TabBarFlags.AutoSelectNewTabs ) -- FittingPolicyScroll
 local size_bytes      = 0
 local size_bytes_t    = {8,16}
 
 local actorPointer    = 0x8011f9f0
 local actorPointerPtr = ffi.cast('uint32_t*', mem +  bit.band(actorPointer, 0x1fffff))
-local actors          = {actorPointerPtr,actorPointerPtr,actorPointerPtr,actorPointerPtr}
+local actors          = {actorPointerPtr}
 
 _vsync = PCSX.Events.createEventListener('GPU::Vsync', w.doFreeze )
+
 -- imgui.constant.TabItemFlags.SetSelected
+-- imgui.constant.TableColumnFlags.WidthFixed
 
 function DrawImguiFrame()
   
@@ -82,46 +86,44 @@ function DrawImguiFrame()
 
     w.inputLogger(mem,joker)
     
-    imgui.safe.BeginTabBar('MainBar', true, function()
+    imgui.safe.BeginTabBar('MainBar', tabFlags, function()
 
       imgui.safe.BeginTabItem('Actors', function()
         
-        imgui.safe.BeginTabBar('ActorsChild', imgui.constant.TabBarFlags.TabListPopupButton, function()
-        local actorCount = 1
-          while actors[actorCount][0] ~= 0 and actorCount < 4 do
+        imgui.safe.BeginTabBar('ActorsChild', tabFlags, function()
+
+          for actorCount, currentActor in ipairs(actors) do
             imgui.safe.BeginTabItem(actorCount, function()
             
-              -- imgui.safe.BeginTable('Actor Table##'..actorCount, 2, tableFlags, function() 
-                -- imgui.TableSetupColumn('' , imgui.constant.TableColumnFlags.WidthFixed, 136 ) 
-                -- imgui.TableSetupColumn('')
-
-                for k, v in ipairs(actorOffsets) do
-                  local curAddress = actors[actorCount][0] + v.offset
-                  local curaddressPtr, curValue = w.validateAddress( mem, curAddress, w.ctSize_t_inv[v.size] )
-                  
-                  -- imgui.TableNextColumn(); imgui.Selectable( v.name )
-                  -- imgui.TableNextColumn()
-                  if v.text then
-                    w.drawInputText(mem, curAddress, v.name, 23 )
-                  else
-                    w.drawInputInt(mem, curAddress, v.name, w.ctSize_t_inv[v.size])
-                  end
-                  -- imgui.TableNextRow()
-                end
+              imgui.safe.BeginTable('Actor Table##'..actorCount, 2, tableFlags, function()
                 
-                -- Pointer to the next actor
-                local nextActor    = actors[actorCount][0]
-                local nextActorPtr = ffi.cast('uint32_t*', mem +  bit.band( nextActor , 0x1fffff))
-                actors[actorCount+1] = nextActorPtr
+                for k, field in ipairs(actorStruct) do
+                  local curAddress = currentActor[0] + field.offset
 
-              -- end) -- Actor Table
+                  imgui.TableNextColumn()
+                  -- If last column, we start instead at the next row
+                  if imgui.TableGetColumnIndex() == 1 and (field.sameline or field.text) then imgui.TableNextColumn(); end;
+                  
+                  if field.text then
+                    w.drawInputText(mem, curAddress, field.name, 23)
+                  else
+                    w.drawInputInt(mem, curAddress, field.name, w.ctSize_t_inv[field.size])
+                  end
+                end -- ipairs actorStruct
+              end) -- Actor Table
             end) -- actorCount TabItem
-          actorCount = actorCount + 1
-          end
-          
-        end) -- ActorsChild TabBar
-
-      end) -- Actor
+              
+            -- Pointer to the next actor
+            local nextActor = currentActor[0]
+            if nextActor == 0 then
+              break
+            else
+              local nextActorPtr = ffi.cast('uint32_t*', mem +  bit.band(nextActor , 0x1fffff))
+              actors[actorCount+1] = nextActorPtr
+            end
+          end -- ipairs actors
+        end) -- ActorsChild
+      end) -- Actors
     
       imgui.safe.BeginTabItem('Ashley', function()
 
@@ -161,7 +163,7 @@ function DrawImguiFrame()
         w.drawInputText(mem, currWeaponName, 'Weapon\'s name', 16 )
         w.drawInputText(mem, charName, 'Character\'s name', 16 )
         
-      end) --Values
+      end) -- Ashley
       
       
       imgui.safe.BeginTabItem('Rooms', function()
@@ -185,7 +187,7 @@ function DrawImguiFrame()
           end
         end) -- ##Room
         
-      end) --Rooms
+      end) -- Rooms
       
       
       imgui.safe.BeginTabItem('Items', function()
@@ -209,7 +211,7 @@ function DrawImguiFrame()
           end
         end) -- ##New item
         
-      end) --Items
+      end) -- Items
       
       
       imgui.safe.BeginTabItem('Freeze', function()

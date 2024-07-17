@@ -341,7 +341,7 @@ function w.DrawFrozen()
       if imgui.SmallButton('x##'..k) then w.frozenAddresses[k] = nil end
       imgui.SameLine();
       if imgui.Selectable(("8%.7X"):format(math.abs(k)) .. ' - ' .. w.dec2hex( v[3] )) then
-        PCSX.GUI.jumpToMemory(k)
+        PCSX.GUI.jumpToMemory(k,4)
       end
     end
   end)
@@ -490,7 +490,7 @@ function w.drawJumpButton(address)
   -- display button to jump to the address at the Memory Editor
   imgui.SameLine();
     if imgui.Button( '>##' .. address ) then
-       PCSX.GUI.jumpToMemory(address)
+       PCSX.GUI.jumpToMemory(address,4)
     end
 
   if imgui.IsItemHovered(imgui.constant.HoveredFlags.ForTooltip) and imgui.BeginTooltip() then
@@ -503,16 +503,16 @@ end
 
 function w.drawInputText(mem, address, name, size, width)
   
-  -- Last input is saved and used as hint
+  -- Last input is used as hint, otherwise it is read from memory
   local hint = w[address] or w.decode(mem,address,size,text_t)
   local width = width or 200
-  imgui.SetNextItemWidth(width);
+  imgui.SetNextItemWidth(width)
   
   local changed, value = imgui.extra.InputText(name, hint, imgui.constant.InputTextFlags.EnterReturnsTrue)
 
   if changed then
     w.insert_string(mem,address,size,text_t,value)
-    w[address] = value
+    w[address] = string.sub(value,1,size-1)
   end
 
   w.drawJumpButton(address)

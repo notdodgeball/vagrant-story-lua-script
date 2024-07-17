@@ -41,7 +41,7 @@ function p.setOutput(func)
 end
 
 
-function p.printRect()
+function p.drawRectangle()
 
   -- ugly test rectangle
   nvg:beginPath()
@@ -99,7 +99,7 @@ end
 
 function p.screenLog(t)
 
-  -- prints into the screen, can be called multiple times at the same cycle.
+  -- prints into the screen left size, can be called multiple times at the same cycle.
   if not p.isOutputSet then return end
 
   nvg:fontSize(p.fontSize)
