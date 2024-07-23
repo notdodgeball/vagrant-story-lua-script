@@ -17,28 +17,31 @@ local function nextSeed(value)
   return ((low + high * 0x10000) % 0x100000000) + 0x3039
 end
 
-w.seeds = { -1 } -- [0]= 0, 0 
+w.seeds = { -1 }
 w.seedsOut = {  }
 
 -- Return current and upcoming (up to number) rng values
 function w.rngTable(seedPtr,number)
 
   local newSeed = seedPtr[0]
-  w.seedsOut[1] = w.dec2hex( newSeed , '%08X' )
   
   if newSeed ~= w.seeds[1] then
+    w.rngCounter = w.rngCounter + 1
+
     local mismatch = false
     if newSeed ~= w.seeds[2] then mismatch = true end
 
-    -- w.seeds[0] = (not mismatch and w.seeds[1]) or 0 -- (a ? b : c)
-    w.seeds[1] = newSeed
-    w.rngCounter = w.rngCounter + 1
-
-    for i=2,number do
-      if i == number or mismatch then w.seeds[i] = nextSeed( w.seeds[i-1] ) else w.seeds[i] = w.seeds[i+1] end --  i == number /// w.seeds[i] == nil
-      local a = w.dec2hex( w.seeds[i] , '%08X' )
-      if i == 1  then a = a .. " ! "  end
-      w.seedsOut[i] = i .. ' - ' .. a 
+    for i=1,number do
+    
+      if i == 1 
+        then w.seeds[i] = newSeed
+      elseif i == number or mismatch
+        then w.seeds[i] = nextSeed( w.seeds[i-1] )
+      else
+        w.seeds[i] = w.seeds[i+1]
+      end
+      
+      w.seedsOut[i] = i .. ' - ' .. w.dec2hex( w.seeds[i] , '%08X' )
     end
 
   end
@@ -552,7 +555,6 @@ function w.drawLoadButton(saveName)
   end
 
 end
-
 
 
 return w

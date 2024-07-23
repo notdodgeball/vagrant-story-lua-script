@@ -125,6 +125,7 @@ function DrawImguiFrame()
         end) -- ActorsChild
       end) -- Actors
     
+    
       imgui.safe.BeginTabItem('Ashley', function()
 
         w.drawSlider(mem, maxSpeed , 'MaxSpeed', 'uint8_t*', 0, 40)
@@ -136,22 +137,18 @@ function DrawImguiFrame()
         imgui.SeparatorText('Coordinates')
         imgui.safe.BeginTable('TableCoordinates', 2, tableFlags, function() 
            imgui.TableSetupColumn('' , imgui.constant.TableColumnFlags.WidthFixed, 136 ) 
-           imgui.TableSetupColumn('' )
 
-           -- imgui.TableHeadersRow()
            imgui.TableNextColumn(); w.drawInputInt(mem, posX, 'X', 'int16_t*')
            imgui.TableNextColumn(); w.drawSlider(mem, posX, '##x', 'int16_t*', -2500, 2500)
-           imgui.TableNextRow()
            imgui.TableNextColumn(); w.drawInputInt(mem, posY, 'Y', 'int16_t*')
            imgui.TableNextColumn(); w.drawSlider(mem, posY, '##y', 'int16_t*', -2500, 2500)
-           imgui.TableNextRow()
            imgui.TableNextColumn(); w.drawInputInt(mem, posZ, 'Z', 'int16_t*', 1, true)
            imgui.TableNextColumn(); w.drawSlider(mem, posZ, '##z', 'int16_t*', 150, -500)
         end) -- TableCoordinates
         
         imgui.SeparatorText('Checks')
         w.drawCheckbox(mem, mode, 'Battle Mode', 0x01, 0x00, true)
-        imgui.SameLine();
+        imgui.SameLine()
         _, canMoonJump = imgui.Checkbox('Moon Jump', canMoonJump)
         
         if canMoonJump then
@@ -159,7 +156,6 @@ function DrawImguiFrame()
         end
         
         imgui.SeparatorText('Strings')
-        
         w.drawInputText(mem, currWeaponName, 'Weapon\'s name', 16 )
         w.drawInputText(mem, charName, 'Character\'s name', 16 )
         
@@ -217,16 +213,16 @@ function DrawImguiFrame()
       imgui.safe.BeginTabItem('Freeze', function()
         
         _, w.canFreeze = imgui.Checkbox('Enable?', w.canFreeze)
-        imgui.SameLine();
-
-        imgui.SetNextItemWidth(100); 
+        imgui.SameLine()
+        imgui.SetNextItemWidth(100)
         local changedFre, freezeValue = imgui.extra.InputText('Add address', '' , hexFlags )
+        
         if changedFre and not w.isEmpty(freezeValue) then
           local freezeNumber = tonumber(freezeValue, 16)
           w.addFreeze(mem,freezeNumber)
         end
         
-        imgui.SetNextItemWidth(280);
+        imgui.SetNextItemWidth(280)
         w.DrawFrozen()
         
       end) -- Freeze
