@@ -3,13 +3,6 @@
 -- made by optrin
 --========================================================
 
--- local file = Support.File.open('s1', 'READ')
--- if not file:failed() then
-  -- PCSX.loadSaveState(file)
-  -- print('Loaded file ' .. 's1')
-  -- end
--- file:close()
-
 p = require 'prt'
 w = require 'widgets'
 require 'map'
@@ -57,28 +50,29 @@ local currWeaponName  = 0x8011fa7c
 local square          = PCSX.CONSTS.PAD.BUTTON.SQUARE
 local canMoonJump     = false
 
-local hexFlags        =  bit.bor ( 
-  bit.bor( imgui.constant.InputTextFlags.CharsHexadecimal , imgui.constant.InputTextFlags.CharsNoBlank )
-  , bit.bor( imgui.constant.InputTextFlags.EnterReturnsTrue , imgui.constant.InputTextFlags.CharsUppercase )
-)
-
-local tableFlags      =  bit.bor ( 
-  bit.bor( imgui.constant.TableFlags.NoSavedSettings , imgui.constant.TableFlags.NoClip ) --Resizable
-  , bit.bor( imgui.constant.TableFlags.NoPadOuterX   , imgui.constant.TableFlags.NoPadInnerX )
-)
-
-local tabFlags        = bit.bor ( imgui.constant.TabBarFlags.TabListPopupButton , imgui.constant.TabBarFlags.AutoSelectNewTabs ) -- FittingPolicyScroll
 local size_bytes      = 0
 local size_bytes_t    = {8,16}
 
+-- 0x800F1928: Actor Pointers Table (List all enemies / characters currently loaded in memory) 
 local actorPointer    = 0x8011f9f0
 local actorPointerPtr = ffi.cast('uint32_t*', mem +  bit.band(actorPointer, 0x1fffff))
 local actors          = {actorPointerPtr}
 
+local hexFlags        =  bit.bor ( 
+    bit.bor( imgui.constant.InputTextFlags.CharsHexadecimal , imgui.constant.InputTextFlags.CharsNoBlank )
+  , bit.bor( imgui.constant.InputTextFlags.EnterReturnsTrue , imgui.constant.InputTextFlags.CharsUppercase )
+)
+
+local tableFlags      =  bit.bor ( 
+    bit.bor( imgui.constant.TableFlags.NoSavedSettings , imgui.constant.TableFlags.NoClip ) -- Resizable
+  , bit.bor( imgui.constant.TableFlags.NoPadOuterX   , imgui.constant.TableFlags.NoPadInnerX )
+)
+
+local tabFlags        = bit.bor ( imgui.constant.TabBarFlags.TabListPopupButton , imgui.constant.TabBarFlags.AutoSelectNewTabs )
+
+
 _vsync = PCSX.Events.createEventListener('GPU::Vsync', w.doFreeze )
 
--- imgui.constant.TabItemFlags.SetSelected
--- imgui.constant.TableColumnFlags.WidthFixed
 
 function DrawImguiFrame()
   
@@ -86,7 +80,7 @@ function DrawImguiFrame()
 
     w.inputLogger(mem,joker)
     
-    imgui.safe.BeginTabBar('MainBar', tabFlags, function()
+    imgui.safe.BeginTabBar('MainTabBar', tabFlags, function()
 
       imgui.safe.BeginTabItem('Actors', function()
         
@@ -109,21 +103,23 @@ function DrawImguiFrame()
                   else
                     w.drawInputInt(mem, curAddress, field.name, w.ctSize_t_inv[field.size])
                   end
-                end -- ipairs actorStruct
+                end -- ipairs(actorStruct)
               end) -- Actor Table
-            end) -- actorCount TabItem
+            end) -- actorCount Tab
               
-            -- Pointer to the next actor
+            -- Add the pointer to the next actor to the actors table
             local nextActor = currentActor[0]
-            if nextActor == 0 then
+            local nextActorPtr = ffi.cast('uint32_t*', mem +  bit.band(nextActor , 0x1fffff))
+            
+            if nextActorPtr[0] == 0 then
               break
             else
-              local nextActorPtr = ffi.cast('uint32_t*', mem +  bit.band(nextActor , 0x1fffff))
               actors[actorCount+1] = nextActorPtr
             end
-          end -- ipairs actors
-        end) -- ActorsChild
-      end) -- Actors
+            
+          end -- ipairs(actors)
+        end) -- ActorsChild TabBar
+      end) -- Actors Tab
     
     
       imgui.safe.BeginTabItem('Ashley', function()
@@ -246,7 +242,7 @@ function DrawImguiFrame()
 
       end) -- Save/Load      
       
-    end) -- MainBar
+    end) -- MainTabBar
 
   end) -- Command
 
