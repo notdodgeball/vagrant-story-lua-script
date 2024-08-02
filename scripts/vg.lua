@@ -3,7 +3,7 @@
 -- made by optrin
 --========================================================
 
-p = require 'prt'
+g = require 'gui'
 w = require 'widgets'
 require 'map'
 
