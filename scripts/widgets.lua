@@ -17,25 +17,28 @@ local function nextSeed(value)
   return ((low + high * 0x10000) % 0x100000000) + 0x3039
 end
 
-w.seeds = { -1 }
-w.seedsOut = {  }
+w.seeds = {}
+w.seedsOut = { }
+w.before = 4
 
 -- Return current and upcoming (up to number) rng values
 function w.rngTable(seedPtr,number)
 
   local newSeed = seedPtr[0]
   
-  if newSeed ~= w.seeds[1] then
+  if newSeed ~= w.seeds[w.before] then
     w.rngCounter = w.rngCounter + 1
 
     local mismatch = false
-    if newSeed ~= w.seeds[2] then mismatch = true end
+    if newSeed ~= w.seeds[w.before+1] then mismatch = true end
 
-    for i=1,number do
+    for i=1, number + w.before do
     
-      if i == 1 
+      if i < w.before and (mismatch or newSeed == 0)      -- When no seed has yet been calculated or a mismatch (save loaded)
+        then w.seeds[i] = 0
+      elseif i == w.before
         then w.seeds[i] = newSeed
-      elseif i == number or mismatch
+      elseif i == number + w.before or mismatch --  i == number + w.before or ( mismatch and i >= w.before )  
         then w.seeds[i] = nextSeed( w.seeds[i-1] )
       else
         w.seeds[i] = w.seeds[i+1]
@@ -135,10 +138,11 @@ end
 
 function w.validateAddress(mem,address,ct)
   
-  -- the address parameter can be a pointer already, in which case we cast back to uintptr_t
-  -- so we can get the address itself
+  -- main function to deal with pointers
+  -- the address parameter can be a pointer already, in which case we cast back to uintptr_t so we can get the address itself
   
   assert( reflect.typeof(ct).what == 'ptr' , ct .. ' is not a pointer type.')
+  assert( address ~= nil , 'null address call to validateAddress() ' .. ct)
 
   local addressPtr
 
@@ -233,16 +237,48 @@ end
 
 
 
+-- Event functions
+--========================================================
+
+--- A simple frame counter
+w.vblankCtr = 0
+
+function w.incrVblankCtr()
+  w.vblankCtr = w.vblankCtr +1
+end
+
+eventVsyncCtr = PCSX.Events.createEventListener('GPU::Vsync', w.incrVblankCtr )
+
+
+-- A simple cycle counter, needs the folowing PR in your build:
+-- https://github.com/grumpycoders/pcsx-redux/pull/1559 - More lua additions #1559 by johnbaumann
+
+if PCSX.getCPUCycles ~= nil then
+    
+    w.lastCycleCtr = 0
+    
+    function w.printCycleCtr()
+        print( PCSX.getCPUCycles() - w.lastCycleCtr .. ' cycles' )
+        w.lastCycleCtr = PCSX.getCPUCycles()
+    end
+
+    eventPauseCtr = PCSX.Events.createEventListener('ExecutionFlow::Pause', w.printCycleCtr )
+
+end
+
+
+
 -- Breakpoint functions
 --========================================================
 
-function w.addBpWithCondition(mem, address, width, cause, condition)
+
+function w.addBpWrittenAs(mem, address, width, id, condition)
   
-  -- only breaks if the value being written is equal the given input condition
-  -- declared using the cause parameter
-  assert( not h[cause] , cause .. ' already exists.')
+  -- only breaks if the value being written is equal the given parameter
+  -- declared using the id parameter
+  assert( not w[id] , id .. ' already defined.')
   
-  h[cause] = PCSX.addBreakpoint(address, 'Write', width, cause , function()
+  w[id] = PCSX.addBreakpoint(address, 'Write', width, id , function()
     
   local regs = PCSX.getRegisters()
   local pc = regs.pc
@@ -257,20 +293,21 @@ function w.addBpWithCondition(mem, address, width, cause, condition)
 end
 
 
-function w.addBpNotReadAt(mem, address, width, cause, condition)
+function w.addBpNotReadAt(mem, address, width, id, condition)
   
   -- only breaks if the value is being read at the given address
-  -- declared using the cause parameter
-  assert( not h[cause] , cause .. ' already exists.')
+  -- declared using the id parameter
+  assert( not w[id] , id .. ' already defined.')
   
-  h[cause] = PCSX.addBreakpoint( address, 'Read', width, cause , function()
+  w[id] = PCSX.addBreakpoint( address, 'Read', width, id , function()
   
   local regs = PCSX.getRegisters()
   local pc = regs.pc
 
   if pc ~= condition then
     PCSX.pauseEmulator(); PCSX.GUI.jumpToPC(pc)
-    print(w.dec2hex (pc))
+  -- else
+    -- print("breakpoint " .. id .. " was discarted" )
   end
   end)
 end
@@ -350,6 +387,8 @@ function w.DrawFrozen()
   end)
 end
 
+-- Executes doFreeze every frame
+eventVsyncFreeze = PCSX.Events.createEventListener('GPU::Vsync', w.doFreeze )
 
 
 -- Widget functions

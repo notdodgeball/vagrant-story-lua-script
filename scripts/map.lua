@@ -3,9 +3,9 @@
 -- the ofset is not the key cause we need the guaranteed ordering of ipairs()
 actorStruct = {
 --  { offset = 0x0  , name = 'next'         , size = 4 }
---, { offset = 0x2c , name = 'X_coordinate' , size = 2 }
---, { offset = 0x2e , name = 'Y_coordinate' , size = 2 }
-  { offset = 0x50 , name = 'Name'         , size = 2 , text = true } --24
+  { offset = 0x2c , name = 'X_coordinate' , size = 2 , sameline = true}
+, { offset = 0x2e , name = 'Y_coordinate' , size = 2 , sameline = true}
+, { offset = 0x50 , name = 'Name'         , size = 2 , text = true } --24
 , { offset = 0x68 , name = 'CurrentHP'    , size = 2 , sameline = true}
 , { offset = 0x6a , name = 'MaxHP'        , size = 2 }
 , { offset = 0x6c , name = 'Current MP'   , size = 2 , sameline = true}
@@ -124,8 +124,8 @@ area_t[24] = "City Walls South";      area_t[25] = "City Walls East"
 area_t[26] = "City Walls North";      area_t[27] = "Snowfly Forest"
 area_t[28] = "Snowfly Forest East";   area_t[29] = "Town Center West"
 area_t[30] = "Town Center South";     area_t[31] = "Town Center East"
--- area_t[19] = "unused (Town Center, but very different)"
--- area_t[32] = "unused (Snowfly Forest)"
+area_t[19] = "unused (Town Center, but very different)"
+area_t[32] = "unused (Snowfly Forest)"
 
 area_t2 = {
  "Unmapped"              ,"Wine Cellar"         ,"Catacombs"             ,"Sanctum"

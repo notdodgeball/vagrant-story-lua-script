@@ -3,25 +3,44 @@
 -- made by optrin
 --========================================================
 
-g = require 'gui'
-w = require 'widgets'
+-- jit.off()
+
+gui = require 'gui'
+w   = require 'widgets'
 require 'map'
 
+--==========-- Variables
+
 local mem             = PCSX.getMemPtr()
+local areaDesc        = 'Select area'
 local areaDesc        = 'Select area'
 local areaId          = 0
 
 local memWatch        = '80001888'
 local memWatchInt     = tonumber(memWatch, 16)
-local joker           = 0x8005E1C0 -- 0x8005E238
-local mode            = 0x8011FA10
+local joker           = 0x05E1C0 -- 0x05E238
 local loadRoom        = 0x0F1A48
-local roomIdToLoad    = 0x800F1AB0
+local roomIdToLoad    = 0x0F1AB0
 local roomIdToLoadPtr = ffi.cast('uint16_t*', mem +  bit.band(roomIdToLoad, 0x1fffff))
 
-local posX            = 0x801203C4
-local posY            = 0x801203C0
-local posZ            = 0x801203C2
+-- 8011FA10 starts character data
+local mode            = 0x11FA10
+local curHP           = 0x11FA58
+local maxHP           = 0x11FA5A
+local curMP           = 0x11FA5C
+local maxMP           = 0x11FA5E
+local risk            = 0x11FA60
+local strength        = 0x11FA62
+local maxSpeed        = 0x11FA73
+local ashleySatus     = 0x120388
+local ashleyState     = 0x1203AE
+
+local posY            = 0x1203C0 -- mirrored at 0x1fff8c (on the stack)
+local posZ            = 0x1203C2
+local posX            = 0x1203C4
+local rotationY       = 0x1203C6
+local rotationZ       = 0x1203C8
+local rotationX       = 0x1203CA
 local posXPtr         = ffi.cast('uint16_t*', mem + bit.band(posX, 0x1fffff))
 local posYPtr         = ffi.cast('uint16_t*', mem + bit.band(posY, 0x1fffff))
 local posZPtr         = ffi.cast('uint16_t*', mem + bit.band(posZ, 0x1fffff))
@@ -31,32 +50,33 @@ local coor            = {
 'z '.. w.dec2hex(posZPtr[0])
  }
 
-local maxSpeed        = 0x8011fa73
-local curSpeed        = 0x80121BE4
-local risk            = 0x8011FA60
-local strength        = 0x8011FA62
-local ashleySize      = 0x801203D0
-local bossSize        = 0x80181550
+local ashleySize      = 0x1203D0
+local curAnimationID  = 0x12095C
+local curSpeed        = 0x121BE4
 
 local itemCount       = 20
-local itemId          = 0x80060F68
-local itemQtd         = 0x80060F6A
+local itemId          = 0x060F68
+local itemQtd         = 0x060F6A
 local itemIdPtr       = ffi.cast('uint8_t*', mem + bit.band(itemId, 0x1fffff))
 local itemQtdPtr      = ffi.cast('uint8_t*', mem + bit.band(itemQtd, 0x1fffff))
 
 local saveName        = ''
-local charName        = 0x8011FA40
-local currWeaponName  = 0x8011fa7c
+local charName        = 0x11FA40
+local currWeaponName  = 0x11fA7C
 local square          = PCSX.CONSTS.PAD.BUTTON.SQUARE
 local canMoonJump     = false
 
 local size_bytes      = 0
 local size_bytes_t    = {8,16}
 
--- 0x800F1928: Actor Pointers Table (List all enemies / characters currently loaded in memory) 
-local actorPointer    = 0x8011f9f0
+-- 0x0F1928: Actor Pointers Table (List all enemies / characters currently loaded in memory) 
+-- also stored at 0x0F19FC
+local actorPointer    = 0x11F9F0
 local actorPointerPtr = ffi.cast('uint32_t*', mem +  bit.band(actorPointer, 0x1fffff))
 local actors          = {actorPointerPtr}
+
+
+--==========-- Flags
 
 local hexFlags        =  bit.bor ( 
     bit.bor( imgui.constant.InputTextFlags.CharsHexadecimal , imgui.constant.InputTextFlags.CharsNoBlank )
@@ -71,8 +91,7 @@ local tableFlags      =  bit.bor (
 local tabFlags        = bit.bor ( imgui.constant.TabBarFlags.TabListPopupButton , imgui.constant.TabBarFlags.AutoSelectNewTabs )
 
 
-_vsync = PCSX.Events.createEventListener('GPU::Vsync', w.doFreeze )
-
+--==========-- imgui drawing
 
 function DrawImguiFrame()
   
@@ -80,10 +99,12 @@ function DrawImguiFrame()
 
     w.inputLogger(mem,joker)
     
-    imgui.safe.BeginTabBar('MainTabBar', tabFlags, function()
-
-      imgui.safe.BeginTabItem('Actors', function()
+    imgui.Button(w.vblankCtr)
         
+    imgui.safe.BeginTabBar('MainTabBar', tabFlags, function()
+            
+      imgui.safe.BeginTabItem('Actors', function()
+                                
         imgui.safe.BeginTabBar('ActorsChild', tabFlags, function()
 
           for actorCount, currentActor in ipairs(actors) do
@@ -128,7 +149,6 @@ function DrawImguiFrame()
         w.drawSlider(mem, curSpeed, 'CurSpeed', 'uint8_t*', 0, 40)
         w.drawSlider(mem, strength, 'STR', 'uint8_t*', 0, 255)
         w.drawSlider(mem, ashleySize , 'Size AS', 'int16_t*', 512, 14000, 2)
-        w.drawSlider(mem, bossSize, ' Size M', 'int16_t*', 512, 14000, 2)
         
         imgui.SeparatorText('Coordinates')
         imgui.safe.BeginTable('TableCoordinates', 2, tableFlags, function() 
