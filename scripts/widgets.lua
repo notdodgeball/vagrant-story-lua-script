@@ -11,45 +11,48 @@ local w = {}
 
 w.rngCounter = 0
 
-local function nextSeed(value)
+-- ANSI C Linear Congruential Pseudo-RNG
+local function nextRNG(value)
   local high = (value * 0x41C6) % 0x10000
   local low  = (value * 0x4E6D) % 0x100000000
   return ((low + high * 0x10000) % 0x100000000) + 0x3039
 end
 
-w.seeds = {}
-w.seedsOut = { }
-w.before = 4
+w.RNGs = {}        -- our rand numbers
+w.RNGsOut = {}     -- our formatted rand numbers
 
--- Return current and upcoming (up to number) rng values
-function w.rngTable(seedPtr,number)
+-- Return previous, current and upcoming rng values
 
-  local newSeed = seedPtr[0]
+function w.rngTable(seedPtr,size,current)
+
+  current = current or 2                  -- the position of the current seed in the array
+  local newRNG = seedPtr[0]
   
-  if newSeed ~= w.seeds[w.before] then
-    w.rngCounter = w.rngCounter + 1
-
-    local mismatch = false
-    if newSeed ~= w.seeds[w.before+1] then mismatch = true end
-
-    for i=1, number + w.before do
+  if newRNG ~= w.RNGs[current] then
     
-      if i < w.before and (mismatch or newSeed == 0)      -- When no seed has yet been calculated or a mismatch (save loaded)
-        then w.seeds[i] = 0
-      elseif i == w.before
-        then w.seeds[i] = newSeed
-      elseif i == number + w.before or mismatch --  i == number + w.before or ( mismatch and i >= w.before )  
-        then w.seeds[i] = nextSeed( w.seeds[i-1] )
-      else
-        w.seeds[i] = w.seeds[i+1]
+    w.rngCounter = w.rngCounter + 1
+    
+    -- mismatch (a loaded save more likely)
+    local mismatch = newRNG ~= w.RNGs[current+1]
+
+    for i=1, size do
+    
+      if i < current and (mismatch or newRNG == 0)     -- When no seed has yet been calculated or a mismatch
+        then w.RNGs[i] = -1
+      elseif i == current
+        then w.RNGs[i] = newRNG
+      elseif i == size or mismatch                      -- new seeds when there is a mismatch or it's the last one
+        then w.RNGs[i] = nextRNG( w.RNGs[i-1] )
+      else                                              -- otherwise it's the following one
+        w.RNGs[i] = w.RNGs[i+1]
       end
       
-      w.seedsOut[i] = i .. ' - ' .. w.dec2hex( w.seeds[i] , '%08X' )
+      w.RNGsOut[i] = i - current  .. ' - ' .. w.dec2hex( w.RNGs[i] , '%08X' )
     end
 
   end
 
-return w.seedsOut
+return w.RNGsOut
 
 end
 
@@ -57,7 +60,7 @@ end
 -- advances the RNG n steps, credits to ALAKTORN
 local function RNGSteps(iRNG, steps)
   for i = 1, steps do
-    iRNG = nextSeed(iRNG)
+    iRNG = nextRNG(iRNG)
   end
   return iRNG
 end

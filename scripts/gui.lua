@@ -41,15 +41,8 @@ function g.setOutput(func)
 end
 
 
--- rect(x, y, width, height)
--- Draws a rectangle whose top-left corner is specified by (x, y) with the specified width and height.
-
--- Before this method is executed, the moveTo() method is automatically called with the parameters (x,y). In other words, the current -pen position is automatically reset to the default coordinates.
-
-
 function g.drawRectangle(x, y, width, height)
 
-  -- ugly test rectangle
   -- equivalent to bizhawk gui.drawRectangle
 
   nvg:beginPath()
