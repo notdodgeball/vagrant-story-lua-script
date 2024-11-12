@@ -10,6 +10,7 @@ __vg.lua__ is the main file and the one executed by the emulator.
 __map.lua__ contains the area and text encoding info for the game.
 
 __widgets.lua__ implements several support functions and some imgui helpers:
+* drawFreezeCheck
 * drawCheckbox
 * drawSlider
 * drawMemory
@@ -20,13 +21,11 @@ __widgets.lua__ implements several support functions and some imgui helpers:
 * drawInputText
 * drawSaveButton
 * drawLoadButton
-* drawFreezeCheck
 
-__prt.lua__ implements output functions
-* p.setOutput
-* p.screenLog
-* p.printCoordinates
-* p.text
+__gui.lua__ implements the output process, and some helpers
+* drawRectangle
+* text
+* addmessage
 
 __out.lua__ File to replace the content of output.lua to enable drawing into the screen.
 
@@ -48,11 +47,11 @@ Or use the command line arguments
 You can use this script in your own project, an example:
 
 ```lua
-p = require 'prt'
-w = require 'widgets'
+gui = require 'gui'
+w   = require 'widgets'
 
-p.setOutput(function() 
-  p.text(200,50,'Look at me')
+gui.setOutput(function() 
+  gui.text(200,50,'Look at me')
 end)
 
 function DrawImguiFrame()
