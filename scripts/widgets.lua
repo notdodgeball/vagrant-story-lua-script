@@ -85,7 +85,8 @@ input_t[0x4000] = 'Down';     input_t[0x8000] = 'Left'
 
 function w.inputLogger(mem, address)
   
-  -- prints the controller input
+  -- prints the controller input, needs to be called from inside DrawImguiFrame()
+  
   local jokerPtr, value = w.validateAddress(mem,address,'uint16_t*')
   
   local input = ''
@@ -194,21 +195,22 @@ function w.decode(mem,address,size,tbl)
   -- for ASCII, string.byte should work
   local addressPtr = ffi.cast('uint8_t*', mem + bit.band(address, 0x1fffff))
   local text = ''
-  local space = false
   
-  for i=0,size,1 do
+  local i = 0
+  while i < size do
 
-    local charIndex = addressPtr[0+i]
+    local charIndex = addressPtr[i]
     
-    if space then
-      space = false; text = text .. " ";
-    elseif charIndex == 0xFA then 
-      space = true
-    elseif charIndex ~= 0xE7 then 
-      if tbl[charIndex] ~= nil then text = text .. tbl[charIndex] end
+    -- VG has some 16bit chars, which we can mostly ignore, sadly 0xFA06 is a space and so is 0x8F
+    if charIndex == 0xFA then 
+      i = i + 1; text = text .. " ";
+    elseif charIndex == 0xE7 then 
+      break
     else
-      break -- == 0xE7
+      if tbl[charIndex] ~= nil then text = text .. tbl[charIndex] end
     end;
+    
+    i = i + 1
   end
   
   return text

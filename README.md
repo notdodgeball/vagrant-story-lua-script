@@ -22,12 +22,12 @@ __widgets.lua__ implements several support functions and some imgui helpers:
 * drawSaveButton
 * drawLoadButton
 
-__gui.lua__ implements the output process, and some helpers
+__gui.lua__ implements the output process, and some helpers:
 * drawRectangle
 * text
 * addmessage
 
-__out.lua__ File to replace the content of output.lua to enable drawing into the screen.
+__out.lua__ is the file to replace the content of output.lua to enable drawing into the screen.
 
 Showcase video of older version:
 [![Showcase video](https://i3.ytimg.com/vi/Wyxv00NZJdc/maxresdefault.jpg)](https://youtu.be/Wyxv00NZJdc)
@@ -57,7 +57,7 @@ end)
 function DrawImguiFrame()
   
   imgui.safe.Begin('Command', true, function()
-    w.drawSlider(PCSX.getMemPtr(),  0x80000000, 'Something', 'uint8_t*', 0, 40)
+    w.drawSlider(PCSX.getMemPtr(),  0x80000000, 'Something', 'uint8_t*', 0, 0xFF)
   end)
 
 end
