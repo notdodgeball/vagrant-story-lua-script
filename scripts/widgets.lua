@@ -10,6 +10,9 @@ local w = {}
 --========================================================
 
 w.rngCounter = 0
+w.RNGs = {}        -- our rand numbers
+w.RNGsOut = {}     -- our formatted rand numbers for output
+
 
 -- ANSI C Linear Congruential Pseudo-RNG
 local function nextRNG(value)
@@ -18,14 +21,11 @@ local function nextRNG(value)
   return ((low + high * 0x10000) % 0x100000000) + 0x3039
 end
 
-w.RNGs = {}        -- our rand numbers
-w.RNGsOut = {}     -- our formatted rand numbers
 
 -- Return previous, current and upcoming rng values
-
 function w.rngTable(seedPtr,size,current)
 
-  current = current or 2                  -- the position of the current seed in the array
+  current = current or 2                            -- the position of the current seed in the array
   local newRNG = seedPtr[0]
   
   if newRNG ~= w.RNGs[current] then
@@ -37,8 +37,8 @@ function w.rngTable(seedPtr,size,current)
 
     for i=1, size do
     
-      if i < current and (mismatch or newRNG == 0)     -- When no seed has yet been calculated or a mismatch
-        then w.RNGs[i] = -1
+      if i < current and (mismatch or newRNG == 0)  -- When no seed has yet been calculated or a mismatch
+        then w.RNGs[i] = 0
       elseif i == current
         then w.RNGs[i] = newRNG
       elseif i == size or mismatch                      -- new seeds when there is a mismatch or it's the last one
@@ -47,7 +47,7 @@ function w.rngTable(seedPtr,size,current)
         w.RNGs[i] = w.RNGs[i+1]
       end
       
-      w.RNGsOut[i] = i - current  .. ' - ' .. w.dec2hex( w.RNGs[i] , '%08X' )
+      w.RNGsOut[i] = i - current  .. ' - ' .. w.dec2hex( w.RNGs[i] , '%08X' ) -- bit.band(w.RNGs[i], 0xffffffff)
     end
 
   end
@@ -132,6 +132,36 @@ w.ctSize_t_inv = {
 ,[4] = 'uint32_t*'
 }
 
+
+function w.roundTo2(n)
+  return math.floor((math.floor(n*2) + 1)/2)
+end
+
+
+function w.isArrayAllZeros(array)
+
+    -- Check if all values are zero
+    for k, v in pairs(array) do
+        if v ~= 0 then
+            return false
+        end
+    end
+    return true
+end
+
+
+function w.isArrayAllZeros2(array)
+
+    -- Sum all the values in the array
+    local sum = 0
+    for k, v in pairs(array) do
+        sum = sum + v
+    end
+
+    return sum == 0
+end
+
+
 function w.dec2hex(num, format)
 
   -- returns hex string
@@ -140,13 +170,23 @@ function w.dec2hex(num, format)
 end
 
 
+function w.isValidAddress(n)
+  return n > 0x80000000 and n < 0x80200000
+end
+
+
+function w.isEmpty(s)
+  return s == nil or s == ''
+end
+
+
 function w.validateAddress(mem,address,ct)
   
   -- main function to deal with pointers
   -- the address parameter can be a pointer already, in which case we cast back to uintptr_t so we can get the address itself
   
-  assert( reflect.typeof(ct).what == 'ptr' , ct .. ' is not a pointer type.')
-  assert( address ~= nil , 'null address call to validateAddress() ' .. ct)
+  assert(reflect.typeof(ct).what == 'ptr' , ct .. ' is not a pointer type.')
+  assert(address ~= nil , 'null address call to validateAddress() ' .. ct)
 
   local addressPtr
 
@@ -160,11 +200,6 @@ function w.validateAddress(mem,address,ct)
   end
   
   return addressPtr, addressPtr[0], address
-end
-
-
-function w.isEmpty(s)
-  return s == nil or s == ''
 end
 
 
@@ -248,34 +283,24 @@ end
 --- A simple frame counter
 w.vblankCtr = 0
 
-function w.incrVblankCtr()
-  w.vblankCtr = w.vblankCtr +1
-end
-
-eventVsyncCtr = PCSX.Events.createEventListener('GPU::Vsync', w.incrVblankCtr )
+eventVsyncCtr = PCSX.Events.createEventListener('GPU::Vsync', function()
+    w.vblankCtr = w.vblankCtr +1
+end )
 
 
--- A simple cycle counter, needs the folowing PR in your build:
--- https://github.com/grumpycoders/pcsx-redux/pull/1559 - More lua additions #1559 by johnbaumann
+--- A simple cycle counter, it's printed to console when the emulator is paused
+--- needs commit 4869d306391c6889adfa4a00c4e80dad4006d938 (pull request #1559)
+w.cycleCtr = 0
 
-if PCSX.getCPUCycles ~= nil then
-    
-    w.lastCycleCtr = 0
-    
-    function w.printCycleCtr()
-        print( PCSX.getCPUCycles() - w.lastCycleCtr .. ' cycles' )
-        w.lastCycleCtr = PCSX.getCPUCycles()
-    end
-
-    eventPauseCtr = PCSX.Events.createEventListener('ExecutionFlow::Pause', w.printCycleCtr )
-
-end
+eventPauseCtr = PCSX.Events.createEventListener('ExecutionFlow::Pause', function()
+  print( string.format('%d',PCSX.getCPUCycles() - w.cycleCtr) .. ' cycles' )
+  w.cycleCtr = PCSX.getCPUCycles()
+end )
 
 
 
 -- Breakpoint functions
 --========================================================
-
 
 function w.addBpWrittenAs(mem, address, width, id, condition)
   
@@ -396,11 +421,74 @@ end
 eventVsyncFreeze = PCSX.Events.createEventListener('GPU::Vsync', w.doFreeze )
 
 
+
+-- Color functions
+--========================================================
+
+function w.ColorToNVG(acolors, alpha)
+    
+    -- color table to NVGcolor struct
+    if acolors == nil or w.isArrayAllZeros(acolors) then
+      acolors = {r = 0, g = 1, b = 0}
+    end
+    
+    alpha = alpha or 200
+
+    return  nvg.transRGBA( nvg.Color.New(acolors.r, acolors.g, acolors.b) , alpha)
+    -- return nvg.Color.New(acolors.r, acolors.g, acolors.b, alpha)
+    -- return nvg.RGBA(colors.r* 255, colors.g* 255, colors.b* 255, colors.a* 255)
+end
+
+
+local ColorPickerFlags     = 0
+
+local function rgbTableToHex(colorTable)
+    
+    --  math.ceil or floor won't work
+    local r, g, b = w.roundTo2(colorTable.r * 255), w.roundTo2(colorTable.g * 255), w.roundTo2(colorTable.b * 255)
+    return string.format("#%02X%02X%02X", r, g, b)
+end
+
+
+function w.drawColorPicker3(label,colors)
+    
+    if imgui.Button(label) then w[label] = not w[label] end
+    
+    if w[label] then
+      imgui.SetNextItemWidth(150)
+      
+      _, colors = imgui.extra.ColorPicker3(label,colors,ColorPickerFlags)
+      
+      -- if _ then print(rgbTableToHex(colors)) end
+      
+    end
+    
+    return colors
+end
+
+
+function w.drawColorPicker4(label,colors)
+
+    if imgui.Button(label) then w[label] = not w[label] end
+    
+    if w[label] then
+      imgui.SetNextItemWidth(150)
+      
+      _,colors = imgui.extra.ColorPicker4(label,colors,ColorPickerFlags)
+      
+      -- if _ then print(rgbTableToHex(colors)) end
+      
+    end
+    return colors
+    
+end
+
+
+
 -- Widget functions
 --========================================================
 
 w.fontsize = imgui.GetFontSize()
-
 
 function w.drawCheckbox(mem, address, name, valueOn, valueOff, isReadOnly)
   
@@ -443,42 +531,42 @@ end
 
 
 function w.drawMemory(mem, address, bytes, range)
-	
+  
   -- Display the memory as simple text, only useful for copying it basically
-	local range = range or 143
-	local bytes = bytes or 0
-	local ct = ''
-	local formato = ''
-	
-	if bytes == 1 then 
-		ct = 'uint8_t*'
-		formato = '%02X'
-	elseif bytes == 2 then
-		ct = 'uint16_t*'
-		formato = '%04X'
+  local range = range or 143
+  local bytes = bytes or 0
+  local ct = ''
+  local formato = ''
+  
+  if bytes == 1 then 
+    ct = 'uint8_t*'
+    formato = '%02X'
+  elseif bytes == 2 then
+    ct = 'uint16_t*'
+    formato = '%04X'
   else error ("")
-	end
-	
-	local addressPtr, value, address = w.validateAddress(mem,address,ct)
-	local text = ''
-	
-	for i=0,range,1 do
-		if math.fmod(i,16) == 0 then text = text .. '\n' .. w.dec2hex(address + 8*i*bytes, '%08X') .. ': ' end
-		text =  text .. w.dec2hex( addressPtr[i] , formato )  .. ' ' 
-	end
-	
-	-- imgui.safe.BeginListBox('Address', function()
-	PCSX.GUI.useMonoFont()
-	imgui.TextUnformatted( text )
-	imgui.PopFont()
-	-- end)
-	
-	if imgui.Button('Copy')  then
-		imgui.LogToClipboard()
-		imgui.extra.logText(text)
-		imgui.LogFinish()
-	end
-	
+  end
+  
+  local addressPtr, value, address = w.validateAddress(mem,address,ct)
+  local text = ''
+  
+  for i=0,range,1 do
+    if math.fmod(i,16) == 0 then text = text .. '\n' .. w.dec2hex(address + 8*i*bytes, '%08X') .. ': ' end
+    text =  text .. w.dec2hex( addressPtr[i] , formato )  .. ' ' 
+  end
+  
+  -- imgui.safe.BeginListBox('Address', function()
+  PCSX.GUI.useMonoFont()
+  imgui.TextUnformatted( text )
+  imgui.PopFont()
+  -- end)
+  
+  if imgui.Button('Copy')  then
+    imgui.LogToClipboard()
+    imgui.extra.logText(text)
+    imgui.LogFinish()
+  end
+  
 end
 
 

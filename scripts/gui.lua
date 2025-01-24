@@ -7,6 +7,12 @@
 -- The logic flow:
 -- setOutput() => setScale() => draw()
 
+  -- TODO:
+  -- nvg:fillColor(nvg.Color.New(255,0,0))
+  -- is given as string "0xrrggbbaa" (hex) or as a string name (e.g. "red"). 
+  -- nvg:textBreakLines
+
+
 local g = {}
 
 g.filename = 'out.lua'
@@ -41,26 +47,6 @@ function g.setOutput(func)
 end
 
 
-function g.drawRectangle(x, y, width, height)
-
-  -- equivalent to bizhawk gui.drawRectangle
-
-  nvg:beginPath()
-  nvg:rect(g.minX - 3, g.minY - 0.7*g.lineHeight, 150*g.scaleX, 3 + ( g.offset * (g.lineHeight) ) )
-  nvg:strokeColor(nvg.RGBA(0, 255, 0, 128))
-  nvg:strokeWidth(2)
-  nvg:stroke()
-end
-
-
-function g.text(x,y,text)
-
-  -- equivalent to bizhawk gui.text
-    nvg:text(g.minX + x, g.minY + y, tostring(text) )
-
-end
-
-
 -- Screen size
 g.dstSizeX   = 0
 g.dstSizeY   = 0
@@ -75,7 +61,6 @@ g.scaleY     = 0
 g.offset     = 0
 g.fontSize   = 0
 g.lineHeight = 0
-
 
 function g.setScale(dstSizeX,dstSizeY,cx,cy)
 
@@ -98,7 +83,46 @@ function g.setScale(dstSizeX,dstSizeY,cx,cy)
 end
 
 
-function g.addmessage(t)
+function g.drawRectangle(x, y, width, height, strokeWidth, colors)
+  
+  -- equivalent to bizhawk gui.drawRectangle
+  
+  if not ffi.istype('NVGcolor', colors) then colors = w.ColorToNVG(colors, alpha) end
+  
+  nvg:beginPath()
+  nvg:rect(x, y, width, height)
+  nvg:strokeColor(colors)
+  nvg:strokeWidth(strokeWidth)
+  nvg:stroke()
+  
+end
+
+
+function g.text(x,y,text,colors)
+
+  -- equivalent to bizhawk gui.text
+    nvg:fontSize(g.fontSize)
+    
+    nvg:text( g.minX + x, g.minY + y, tostring(text) )
+
+end
+
+
+function g.textBox(x,y,text,width,in_colors)
+
+  -- gui.text within a box
+    nvg:fontSize(g.fontSize)
+    
+    nvg:textBox( g.minX + x, g.minY + y, width, tostring(text) )
+    local a = nvg:textBoxBounds(g.minX + x, g.minY + y, width, tostring(text))
+    -- nvg:textBoxBounds returns [xmin,ymin, xmax,ymax]
+
+    g.drawRectangle( a[0], a[1], a[2] - a[0] , a[3] - a[1] , 2 , in_colors)
+
+end
+
+
+function g.addmessage(t,in_colors)
 
   -- prints into the screen left size, can be called multiple times at the same cycle.
   -- equivalent to bizhawk gui.addmessage
@@ -118,6 +142,38 @@ function g.addmessage(t)
   else
     error("wrong argument to addmessage()")
   end
+  
+  g.drawRectangle(g.minX - 3, g.minY - 0.7*g.lineHeight, 150*g.scaleX, 3 + ( g.offset * (g.lineHeight) ), 2, in_colors)
+end
+
+
+function g.addmessage2(t,in_colors)
+
+  -- prints into the screen left size, can be called multiple times at the same cycle.
+  -- equivalent to bizhawk gui.addmessage
+  
+  if not g.isOutputSet then return end
+
+  nvg:fontSize(g.fontSize)
+  
+  texttt = ''
+
+  if type(t) == 'string' or type(t) == 'number' then
+    texttt = texttt .. '\n' .. t
+  elseif type(t) == 'table' then
+    for i,v in ipairs(t) do
+      texttt = texttt .. '\n' .. tostring(v)
+    end
+  else
+    error("wrong argument to addmessage()")
+  end
+  
+  nvg:textBox( g.minX, g.minY , 1, tostring(texttt) )
+  local a = nvg:textBoxBounds(g.minX , g.minY , 1, tostring(texttt))
+  -- nvg:textBoxBounds returns [xmin,ymin, xmax,ymax]
+
+  g.drawRectangle( a[0], a[1], a[2] - a[0] , a[3] - a[1] , 2, in_colors)
+
 end
 
 
@@ -136,5 +192,6 @@ function g.draw()
   g.offset = 0
 
 end
+
 
 return g
