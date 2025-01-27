@@ -47,7 +47,7 @@ function w.rngTable(seedPtr,size,current)
         w.RNGs[i] = w.RNGs[i+1]
       end
       
-      w.RNGsOut[i] = i - current  .. ' - ' .. w.dec2hex( w.RNGs[i] , '%08X' ) -- bit.band(w.RNGs[i], 0xffffffff)
+      w.RNGsOut[i] = string.format("%02d", i - current) .. ' - ' .. w.dec2hex( w.RNGs[i] , '%08X' ) -- bit.band(w.RNGs[i], 0xffffffff)
     end
 
   end
@@ -440,8 +440,6 @@ function w.ColorToNVG(acolors, alpha)
 end
 
 
-local ColorPickerFlags     = 0
-
 local function rgbTableToHex(colorTable)
     
     --  math.ceil or floor won't work
@@ -449,6 +447,8 @@ local function rgbTableToHex(colorTable)
     return string.format("#%02X%02X%02X", r, g, b)
 end
 
+
+local ColorPickerFlags     = 0
 
 function w.drawColorPicker3(label,colors)
     

@@ -76,6 +76,9 @@ local actorPointerPtr = ffi.cast('uint32_t*', mem +  bit.band(actorPointer, 0x1f
 local actors          = {actorPointerPtr}
 
 
+local colors1        = {r=0,g=0,b=0}
+
+
 --==========-- Flags
 
 local hexFlags        =  bit.bor ( 
@@ -97,47 +100,60 @@ function DrawImguiFrame()
   
   imgui.safe.Begin('Command', true, function()
 
-    w.inputLogger(mem,joker)
+    -- w.inputLogger(mem,joker)
+    if imgui.Button(w.vblankCtr) then w.vblankCtr = 0 end
     
-    imgui.Button(w.vblankCtr)
-        
     imgui.safe.BeginTabBar('MainTabBar', tabFlags, function()
-            
+      
       imgui.safe.BeginTabItem('Actors', function()
-                                
+        
         imgui.safe.BeginTabBar('ActorsChild', tabFlags, function()
-
-          for actorCount, currentActor in ipairs(actors) do
-            imgui.safe.BeginTabItem(actorCount, function()
+          
+          for actorIndex, currentActor in ipairs(actors) do
             
-              imgui.safe.BeginTable('Actor Table##'..actorCount, 2, tableFlags, function()
-                
-                for k, field in ipairs(actorStruct) do
-                  local curAddress = currentActor[0] + field.offset
-
-                  imgui.TableNextColumn()
-                  -- If last column, we start instead at the next row
-                  if imgui.TableGetColumnIndex() == 1 and (field.sameline or field.text) then imgui.TableNextColumn(); end;
-                  
-                  if field.text then
-                    w.drawInputText(mem, curAddress, field.name, 23)
-                  else
-                    w.drawInputInt(mem, curAddress, field.name, w.ctSize_t_inv[field.size])
-                  end
-                end -- ipairs(actorStruct)
-              end) -- Actor Table
-            end) -- actorCount Tab
-              
             -- Add the pointer to the next actor to the actors table
             local nextActor = currentActor[0]
-            local nextActorPtr = ffi.cast('uint32_t*', mem +  bit.band(nextActor , 0x1fffff))
+            if not w.isValidAddress(nextActor) then
             
-            if nextActorPtr[0] == 0 then
+              if actorIndex > 1 then
+                  print(tostring(actorIndex) .. ' ' .. w.dec2hex(nextActor))
+              end
+            
               break
             else
-              actors[actorCount+1] = nextActorPtr
+              local nextActorPtr = ffi.cast('uint32_t*', mem +  bit.band(nextActor , 0x1fffff))
+              actors[actorIndex+1] = nextActorPtr
             end
             
+            if actorIndex > 1 then
+                
+                local actorName = currentActor[0]+0x50
+                -- print(tostring(actorIndex) .. ' ' .. actorName)
+                -- print(w.dec2hex(nextActor))
+                
+                imgui.safe.BeginTabItem( w.decode(mem, actorName, 0x18, text_t) , function()
+                
+                  imgui.safe.BeginTable('Actor Table##'.. actorIndex, 2, tableFlags, function()
+                    
+                    for _, field in ipairs(actorStruct) do
+                      local curAddress = currentActor[0] + field.offset
+
+                      imgui.TableNextColumn()
+                      -- If last column, we start instead at the next row
+                      if imgui.TableGetColumnIndex() == 1 and (field.sameline or field.text) then imgui.TableNextColumn(); end;
+                      
+                      if field.text then
+                        w.drawInputText(mem, curAddress, field.name, 23)
+                      else
+                        w.drawInputInt(mem, curAddress, field.name, w.ctSize_t_inv[field.size])
+                      end
+                    end -- ipairs(actorStruct)
+                    
+                  end) -- Actor Table
+                end) -- actorName Tab
+            
+            end
+
           end -- ipairs(actors)
         end) -- ActorsChild TabBar
       end) -- Actors Tab
@@ -152,7 +168,7 @@ function DrawImguiFrame()
         
         imgui.SeparatorText('Coordinates')
         imgui.safe.BeginTable('TableCoordinates', 2, tableFlags, function() 
-           imgui.TableSetupColumn('' , imgui.constant.TableColumnFlags.WidthFixed, 136 ) 
+           imgui.TableSetupColumn('' , imgui.constant.TableColumnFlags.WidthFixed, 136 )
 
            imgui.TableNextColumn(); w.drawInputInt(mem, posX, 'X', 'int16_t*')
            imgui.TableNextColumn(); w.drawSlider(mem, posX, '##x', 'int16_t*', -2500, 2500)
@@ -259,6 +275,13 @@ function DrawImguiFrame()
         
         _, saveName = imgui.extra.InputText('save file name', saveName )
         w.drawSaveButton(saveName); imgui.SameLine(); w.drawLoadButton(saveName)
+
+      end) -- Save/Load      
+      
+      imgui.safe.BeginTabItem('Colors', function()
+        
+        colors1 = w.drawColorPicker3('colors1',colors1)
+        colors2 = w.drawColorPicker4('colors2',colors2)
 
       end) -- Save/Load      
       
