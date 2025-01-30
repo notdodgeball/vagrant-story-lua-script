@@ -9,6 +9,15 @@ gui = require 'gui'
 w   = require 'widgets'
 require 'map'
 
+local function reload()
+  PCSX.pauseEmulator()
+  package.loaded['gui'] = nil
+  package.loaded['widgets'] = nil
+  package.loaded['map'] = nil
+  dofile('vg.lua')
+end
+
+
 --==========-- Variables
 
 local mem             = PCSX.getMemPtr()
@@ -102,6 +111,7 @@ function DrawImguiFrame()
 
     -- w.inputLogger(mem,joker)
     if imgui.Button(w.vblankCtr) then w.vblankCtr = 0 end
+    if imgui.Button("Reload") then reload() end
     
     imgui.safe.BeginTabBar('MainTabBar', tabFlags, function()
       
@@ -114,11 +124,6 @@ function DrawImguiFrame()
             -- Add the pointer to the next actor to the actors table
             local nextActor = currentActor[0]
             if not w.isValidAddress(nextActor) then
-            
-              if actorIndex > 1 then
-                  print(tostring(actorIndex) .. ' ' .. w.dec2hex(nextActor))
-              end
-            
               break
             else
               local nextActorPtr = ffi.cast('uint32_t*', mem +  bit.band(nextActor , 0x1fffff))
@@ -128,8 +133,6 @@ function DrawImguiFrame()
             if actorIndex > 1 then
                 
                 local actorName = currentActor[0]+0x50
-                -- print(tostring(actorIndex) .. ' ' .. actorName)
-                -- print(w.dec2hex(nextActor))
                 
                 imgui.safe.BeginTabItem( w.decode(mem, actorName, 0x18, text_t) , function()
                 
