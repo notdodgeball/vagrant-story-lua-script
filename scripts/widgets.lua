@@ -308,7 +308,7 @@ end
 --- A simple frame counter
 w.vblankCtr = 0
 
-local eventVsyncCtr = PCSX.Events.createEventListener('GPU::Vsync', function()
+eventVsyncCtr = PCSX.Events.createEventListener('GPU::Vsync', function()
   w.vblankCtr = w.vblankCtr +1
 end )
 
@@ -317,7 +317,7 @@ end )
 --- needs commit 4869d306391c6889adfa4a00c4e80dad4006d938 (pull request #1559)
 w.cycleCtr = 0
 
-local eventPauseCtr = PCSX.Events.createEventListener('ExecutionFlow::Pause', function()
+eventPauseCtr = PCSX.Events.createEventListener('ExecutionFlow::Pause', function()
   print( string.format('%d',PCSX.getCPUCycles() - w.cycleCtr) .. ' cycles' )
   w.cycleCtr = PCSX.getCPUCycles()
 end )
@@ -461,7 +461,7 @@ function w.DrawFrozen()
 end
 
 -- Executes doFreeze every frame
-local eventVsyncFreeze = PCSX.Events.createEventListener('GPU::Vsync', w.doFreeze )
+eventVsyncFreeze = PCSX.Events.createEventListener('GPU::Vsync', w.doFreeze )
 
 
 
@@ -738,7 +738,11 @@ end
 function w.drawLoadButton(saveName)
 
   if imgui.Button('Load') and not w.isEmpty(saveName) then
+    
     local file = Support.File.open(saveName, 'READ')
+    -- if its compressed
+    if saveExtension == 'sstate' then file = Support.File.zReader(file) end
+    
     if not file:failed() then
       PCSX.loadSaveState(file)
       print('Loaded file ' .. saveName)
@@ -770,7 +774,8 @@ end
 
 
 
-local saveExtension   = ''
+saveExtension         = ''
+w.initialDir          = lfs.currentdir()
 local saveDirectory   = lfs.currentdir()
 local saveName        = ''
 local saveInt         = 0

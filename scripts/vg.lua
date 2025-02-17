@@ -11,6 +11,7 @@ require 'map'
 
 local function reload()
   PCSX.pauseEmulator()
+  lfs.chdir(w.initialDir)
   package.loaded['gui'] = nil
   package.loaded['widgets'] = nil
   package.loaded['map'] = nil
@@ -76,7 +77,7 @@ local canMoonJump     = false
 -- also stored at 0x0F19FC
 local actorPointer    = 0x8011F9F0
 local actorPointerPtr = ffi.cast('uint32_t*', mem +  bit.band(actorPointer, 0x1fffff))
-actors                = {actorPointerPtr}
+local actors          = {actorPointerPtr}
 
 local colors1        = {r=0,g=0,b=0}
 
@@ -88,16 +89,10 @@ function DrawImguiFrame()
 
     -- w.inputLogger(mem,joker)
     
-    if imgui.CollapsingHeader("Header") then
+    -- if imgui.CollapsingHeader("Header") then
       if imgui.Button(w.vblankCtr) then w.vblankCtr = 0 end
       if imgui.Button("Reload") then reload() end
-      
-      if imgui.Button('ss') then
-        local saveStateFile = Support.File.zReader(Support.File.open('C:\\Users\\figue\\AppData\\Roaming\\pcsx-redux\\SLUS01040.sstate5'))
-        PCSX.loadSaveState(saveStateFile)
-        saveStateFile:close()
-      end
-    end
+    -- end
     
     imgui.safe.BeginTabBar('MainTabBar', w.tabFlags, function()
       
