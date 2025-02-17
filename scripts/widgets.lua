@@ -3,7 +3,27 @@
 -- made by optrin
 --========================================================
 
+
 local w = {}
+
+local mem             = PCSX.getMemPtr()
+
+--==========-- Flags
+
+w.textFlags       = bit.bor( imgui.constant.InputTextFlags.EnterReturnsTrue , imgui.constant.InputTextFlags.CharsNoBlank )
+
+w.hexFlags        =  bit.bor ( 
+    bit.bor( imgui.constant.InputTextFlags.CharsHexadecimal , imgui.constant.InputTextFlags.CharsUppercase )
+  , bit.bor( imgui.constant.InputTextFlags.EnterReturnsTrue , imgui.constant.InputTextFlags.CharsNoBlank )
+)
+
+w.tableFlags      =  bit.bor ( 
+    bit.bor( imgui.constant.TableFlags.NoSavedSettings , imgui.constant.TableFlags.NoClip ) -- Resizable
+  , bit.bor( imgui.constant.TableFlags.NoPadOuterX   , imgui.constant.TableFlags.NoPadInnerX )
+)
+
+w.tabFlags        = bit.bor ( imgui.constant.TabBarFlags.TabListPopupButton , imgui.constant.TabBarFlags.AutoSelectNewTabs )
+
 
 
 -- RNG functions
@@ -12,7 +32,6 @@ local w = {}
 w.rngCounter = 0
 w.RNGs = {}        -- our rand numbers
 w.RNGsOut = {}     -- our formatted rand numbers for output
-
 
 -- ANSI C Linear Congruential Pseudo-RNG
 local function nextRNG(value)
@@ -25,7 +44,7 @@ end
 -- Return previous, current and upcoming rng values
 function w.rngTable(seedPtr,size,current)
 
-  current = current or 2                            -- the position of the current seed in the array
+  local current = current or 2                            -- the position of the current seed in the array
   local newRNG = seedPtr[0]
   
   if newRNG ~= w.RNGs[current] then
@@ -83,7 +102,7 @@ input_t[0x1000] = 'Up';       input_t[0x2000] = 'Right'
 input_t[0x4000] = 'Down';     input_t[0x8000] = 'Left'
 
 
-function w.inputLogger(mem, address)
+function w.inputLogger(address)
   
   -- prints the controller input, needs to be called from inside DrawImguiFrame()
   
@@ -141,24 +160,25 @@ end
 function w.isArrayAllZeros(array)
 
     -- Check if all values are zero
-    for k, v in pairs(array) do
-        if v ~= 0 then
-            return false
-        end
+  for k, v in pairs(array) do
+    if v ~= 0 then
+        return false
     end
-    return true
+  end
+  
+  return true
 end
 
 
 function w.isArrayAllZeros2(array)
 
-    -- Sum all the values in the array
-    local sum = 0
-    for k, v in pairs(array) do
-        sum = sum + v
-    end
+  -- Sum all the values in the array
+  local sum = 0
+  for k, v in pairs(array) do
+    sum = sum + v
+  end
 
-    return sum == 0
+  return sum == 0
 end
 
 
@@ -171,7 +191,7 @@ end
 
 
 function w.isValidAddress(n)
-  return n > 0x80000000 and n < 0x80200000
+  return ( n > 0x80000000 and n < 0x80200000 ) -- or (n > 0 and n < 0x00200000)
 end
 
 
@@ -180,25 +200,27 @@ function w.isEmpty(s)
 end
 
 
-function w.validateAddress(mem,address,ct)
+function w.backPointer(ptr)
+
+    local a1 = tonumber( ffi.cast('uintptr_t', mem))
+    local a2 = tonumber( ffi.cast('uintptr_t', ptr))
+    return  bit.bor( ffi.cast('uintptr_t', a2 - a1 ) ,0x80000000 )
+
+end
+
+
+function w.validateAddress(address,ct)
   
   -- main function to deal with pointers
-  -- the address parameter can be a pointer already, in which case we cast back to uintptr_t so we can get the address itself
   
-  assert(reflect.typeof(ct).what == 'ptr' , ct .. ' is not a pointer type.')
-  assert(address ~= nil , 'null address call to validateAddress() ' .. ct)
+  assert( reflect.typeof(ct).what == 'ptr' , ct .. ' is not a pointer type.' )
+  assert( address ~= nil , 'null address call to validateAddress() ' .. ct )
+  assert( not ffi.istype(ct, address) , 'already a ' .. ct .. ' pointer' )
 
   local addressPtr
+  address = bit.band(address, 0x1fffff)
+  addressPtr = ffi.cast(ct, mem + address)
 
-  if not ffi.istype(ct, address) then
-    address = bit.band(address, 0x1fffff)
-    addressPtr = ffi.cast(ct, mem + address)
-  else
-    addressPtr = address
-    local temp = tonumber( ffi.cast("uintptr_t", address) )
-    address = bit.band(temp, 0x1fffff)
-  end
-  
   return addressPtr, addressPtr[0], address
 end
 
@@ -206,7 +228,9 @@ end
 function w.comboList(t)
   
   -- Formats lua table to be used with imgui.Combo:
-  -- c, v = imgui.Combo("label", v, w.comboList(t) )
+  -- c, n = imgui.Combo( "label", n, w.comboList(t) )
+  -- remember imgui.Combo return value is 0 indexed
+  
   local list = ''
   for k, v in ipairs(t) do
     list = list .. v .. '\0'
@@ -224,7 +248,7 @@ function w.returnKey (t, value)
 end
 
 
-function w.decode(mem,address,size,tbl)
+function w.decode(address,size,tbl)
   
   -- Decodes text from game memory using the a text table file
   -- for ASCII, string.byte should work
@@ -246,13 +270,14 @@ function w.decode(mem,address,size,tbl)
     end;
     
     i = i + 1
+    
   end
   
   return text
 end
 
 
-function w.insert_string(mem,address,size,tbl,text)
+function w.insert_string(address,size,tbl,text)
   
   -- Inserts string into game memory using the a text table file
 
@@ -283,8 +308,8 @@ end
 --- A simple frame counter
 w.vblankCtr = 0
 
-eventVsyncCtr = PCSX.Events.createEventListener('GPU::Vsync', function()
-    w.vblankCtr = w.vblankCtr +1
+local eventVsyncCtr = PCSX.Events.createEventListener('GPU::Vsync', function()
+  w.vblankCtr = w.vblankCtr +1
 end )
 
 
@@ -292,7 +317,7 @@ end )
 --- needs commit 4869d306391c6889adfa4a00c4e80dad4006d938 (pull request #1559)
 w.cycleCtr = 0
 
-eventPauseCtr = PCSX.Events.createEventListener('ExecutionFlow::Pause', function()
+local eventPauseCtr = PCSX.Events.createEventListener('ExecutionFlow::Pause', function()
   print( string.format('%d',PCSX.getCPUCycles() - w.cycleCtr) .. ' cycles' )
   w.cycleCtr = PCSX.getCPUCycles()
 end )
@@ -302,7 +327,7 @@ end )
 -- Breakpoint functions
 --========================================================
 
-function w.addBpWrittenAs(mem, address, width, id, condition)
+function w.addBpWrittenAs(address, width, id, condition)
   
   -- only breaks if the value being written is equal the given parameter
   -- declared using the id parameter
@@ -310,35 +335,35 @@ function w.addBpWrittenAs(mem, address, width, id, condition)
   
   w[id] = PCSX.addBreakpoint(address, 'Write', width, id , function()
     
-  local regs = PCSX.getRegisters()
-  local pc = regs.pc
+    local regs = PCSX.getRegisters()
+    local pc = regs.pc
+      
+    local pc_ptr, value = w.validateAddress(pc,'uint32_t*')
+      
+    local regIndex = bit.band( bit.rshift(value , 16), 0x1f )
+    local regValue = PCSX.getRegisters().GPR.r[regIndex]               -- array starts at 0
+      
+    if regValue == condition then PCSX.pauseEmulator(); PCSX.GUI.jumpToPC(pc) end
     
-  local pc_ptr, value = w.validateAddress(mem,pc,'uint32_t*')
-    
-  local regIndex = bit.band( bit.rshift(value , 16), 0x1f )
-  local regValue = PCSX.getRegisters().GPR.r[regIndex]               -- array starts at 0
-    
-  if regValue == condition then PCSX.pauseEmulator(); PCSX.GUI.jumpToPC(pc) end
   end)
 end
 
 
-function w.addBpNotReadAt(mem, address, width, id, condition)
+function w.addBpNotReadAt(address, width, id, condition)
   
   -- only breaks if the value is being read at the given address
   -- declared using the id parameter
   assert( not w[id] , id .. ' already defined.')
-  
+    
   w[id] = PCSX.addBreakpoint( address, 'Read', width, id , function()
-  
-  local regs = PCSX.getRegisters()
-  local pc = regs.pc
+    
+    local regs = PCSX.getRegisters()
+    local pc = regs.pc
 
-  if pc ~= condition then
-    PCSX.pauseEmulator(); PCSX.GUI.jumpToPC(pc)
-  -- else
-    -- print("breakpoint " .. id .. " was discarted" )
-  end
+    if pc ~= condition then
+      PCSX.pauseEmulator(); PCSX.GUI.jumpToPC(pc)
+    end
+    
   end)
 end
 
@@ -356,11 +381,11 @@ function w.isFrozen(address)
 end
 
 
-function w.addFreeze(mem,address,ct,value)
+function w.addFreeze(address,ct,value)
   
   -- Add a address to the frozenAddresses table, value is optional
   local ct = ct or 'uint8_t*'
-  local addressPtr, cur_value, address = w.validateAddress(mem,address,ct)
+  local addressPtr, cur_value, address = w.validateAddress(address,ct)
   
   if not w.frozenAddresses[address] then 
     local value = value or cur_value
@@ -381,7 +406,7 @@ function w.doFreeze()
 end
 
 
-function w.drawFreezeCheckbox(mem, address, name, ct, range)
+function w.drawFreezeCheckbox(address, name, ct, range)
 
   -- Freeze checkbox for a specific range
   -- useful when it's bigger than one byte as it freezes them all
@@ -393,7 +418,7 @@ function w.drawFreezeCheckbox(mem, address, name, ct, range)
   -- ctSize_t[ct] Returns the size of ct in bytes
   if changed then
     for i=0, range*ctSize_t[ct], ctSize_t[ct] do
-      if isFrozen then w.addFreeze(mem,address+i,ct,value) else w.frozenAddresses[address+i] = nil end
+      if isFrozen then w.addFreeze(address+i,ct,value) else w.frozenAddresses[address+i] = nil end
     end
   end
 
@@ -404,82 +429,117 @@ end
 
 
 function w.DrawFrozen()
-
-  -- Draws a ListBox with the all frozen addresses
-  imgui.safe.BeginListBox('##Frozen', function()
-    for k, v in pairs(w.frozenAddresses) do
-      if imgui.SmallButton('x##'..k) then w.frozenAddresses[k] = nil end
-      imgui.SameLine();
-      if imgui.Selectable(("8%.7X"):format(math.abs(k)) .. ' - ' .. w.dec2hex( v[3] )) then
-        PCSX.GUI.jumpToMemory(k,4)
+  
+  local function DrawFrozenListBox()
+  
+    -- Draws a ListBox with the all frozen addresses
+    imgui.safe.BeginListBox('##Frozen', function()
+      for k, v in pairs(w.frozenAddresses) do
+        if imgui.SmallButton('x##'..k) then w.frozenAddresses[k] = nil end
+        imgui.SameLine();
+        if imgui.Selectable(("8%.7X"):format(math.abs(k)) .. ' - ' .. w.dec2hex( v[3] )) then
+          PCSX.GUI.jumpToMemory(k,4)
+        end
       end
-    end
-  end)
+    end)
+    
+  end
+  
+  _, w.canFreeze = imgui.Checkbox('Enable?', w.canFreeze)
+  imgui.SameLine()
+  imgui.SetNextItemWidth(100)
+  local changedFre, freezeValue = imgui.extra.InputText('Add address', '' , w.hexFlags )
+  
+  if changedFre and not w.isEmpty(freezeValue) then
+    local freezeNumber = tonumber(freezeValue, 16)
+    w.addFreeze(freezeNumber)
+  end
+  
+  imgui.SetNextItemWidth(280)
+  DrawFrozenListBox()
+  
 end
 
 -- Executes doFreeze every frame
-eventVsyncFreeze = PCSX.Events.createEventListener('GPU::Vsync', w.doFreeze )
+local eventVsyncFreeze = PCSX.Events.createEventListener('GPU::Vsync', w.doFreeze )
 
 
 
+-- Memory functions
+--========================================================
+
+local memWatch        = '80001888'
+local memWatchInt     = tonumber(memWatch, 16)
+
+local size_bytes      = 0
+local size_bytes_t    = {8,16}
+
+
+function w.DrawMemory()
+
+  changedMen, memWatch = imgui.extra.InputText('Add address', memWatch , w.hexFlags)
+
+  if changedMen then
+    memWatchInt = tonumber(memWatch, 16)
+  end
+  
+  imgui.SetNextItemWidth(150)
+  local _, size_bytes = imgui.Combo("##size_bytes", size_bytes, w.comboList( size_bytes_t ) )
+  w.drawMemory(memWatchInt,size_bytes + 1)
+  
+end
+        
 -- Color functions
 --========================================================
 
 function w.ColorToNVG(acolors, alpha)
-    
-    -- color table to NVGcolor struct
-    if acolors == nil or w.isArrayAllZeros(acolors) then
-      acolors = {r = 0, g = 1, b = 0}
-    end
-    
-    alpha = alpha or 200
+  
+  -- color table to NVGcolor struct
+  if acolors == nil or w.isArrayAllZeros(acolors) then
+    acolors = {r = 0, g = 1, b = 0}
+  end
+  
+  alpha = alpha or 200
 
-    return  nvg.transRGBA( nvg.Color.New(acolors.r, acolors.g, acolors.b) , alpha)
-    -- return nvg.Color.New(acolors.r, acolors.g, acolors.b, alpha)
-    -- return nvg.RGBA(colors.r* 255, colors.g* 255, colors.b* 255, colors.a* 255)
+  return  nvg.transRGBA( nvg.Color.New(acolors.r, acolors.g, acolors.b) , alpha)
+  -- return nvg.Color.New(acolors.r, acolors.g, acolors.b, alpha)
+  -- return nvg.RGBA(colors.r* 255, colors.g* 255, colors.b* 255, colors.a* 255)
 end
 
 
 local function rgbTableToHex(colorTable)
-    
-    --  math.ceil or floor won't work
-    local r, g, b = w.roundTo2(colorTable.r * 255), w.roundTo2(colorTable.g * 255), w.roundTo2(colorTable.b * 255)
-    return string.format("#%02X%02X%02X", r, g, b)
+  
+  --  math.ceil or floor won't work
+  local r, g, b = w.roundTo2(colorTable.r * 255), w.roundTo2(colorTable.g * 255), w.roundTo2(colorTable.b * 255)
+  return string.format("#%02X%02X%02X", r, g, b)
 end
 
 
 local ColorPickerFlags     = 0
 
 function w.drawColorPicker3(label,colors)
-    
-    if imgui.Button(label) then w[label] = not w[label] end
-    
-    if w[label] then
-      imgui.SetNextItemWidth(150)
-      
-      _, colors = imgui.extra.ColorPicker3(label,colors,ColorPickerFlags)
-      
-      -- if _ then print(rgbTableToHex(colors)) end
-      
-    end
-    
-    return colors
+  
+  if imgui.Button(label) then w[label] = not w[label] end
+  
+  if w[label] then
+    imgui.SetNextItemWidth(150)
+    _, colors = imgui.extra.ColorPicker3(label,colors,ColorPickerFlags)
+  end
+  
+  return colors
 end
 
 
 function w.drawColorPicker4(label,colors)
 
-    if imgui.Button(label) then w[label] = not w[label] end
-    
-    if w[label] then
-      imgui.SetNextItemWidth(150)
-      
-      _,colors = imgui.extra.ColorPicker4(label,colors,ColorPickerFlags)
-      
-      -- if _ then print(rgbTableToHex(colors)) end
-      
-    end
-    return colors
+  if imgui.Button(label) then w[label] = not w[label] end
+  
+  if w[label] then
+    imgui.SetNextItemWidth(150)
+    _,colors = imgui.extra.ColorPicker4(label,colors,ColorPickerFlags)
+  end
+  
+  return colors
     
 end
 
@@ -490,10 +550,10 @@ end
 
 w.fontsize = imgui.GetFontSize()
 
-function w.drawCheckbox(mem, address, name, valueOn, valueOff, isReadOnly)
+function w.drawCheckbox(address, name, valueOn, valueOff, isReadOnly)
   
   -- display only checkbox if isReadOnly is true, in which case valueOff is not even used
-  local addressPtr, value = w.validateAddress(mem,address,'uint8_t*')
+  local addressPtr, value = w.validateAddress(address,'uint8_t*')
   
   local check
   if value == valueOn then check = true else check = false end
@@ -510,16 +570,16 @@ function w.drawCheckbox(mem, address, name, valueOn, valueOff, isReadOnly)
 end
 
 
-function w.drawSlider(mem, address, name, ct, min, max, range)
+function w.drawSlider(address, name, ct, min, max, range)
   
   -- works nicely with min>max in cases where the logic is reversed
   -- also changes the bytes ahead, defined by range
   local range = range or 0
-  local addressPtr, value, address = w.validateAddress(mem,address,ct)
+  local addressPtr, value, address = w.validateAddress(address,ct)
   local changed, value = imgui.SliderInt(name, value, min, max, '%d', imgui.constant.SliderFlags.AlwaysClamp)
 
   local isfrozen = w.isFrozen(address)
-  -- imgui.SameLine(); w.drawFreezeCheckbox(mem, address, name, ct, range)
+  -- imgui.SameLine(); w.drawFreezeCheckbox(address, name, ct, range)
 
   if changed and not isfrozen then
     for i=0,range,1 do
@@ -530,7 +590,7 @@ function w.drawSlider(mem, address, name, ct, min, max, range)
 end
 
 
-function w.drawMemory(mem, address, bytes, range)
+function w.drawMemory(address, bytes, range)
   
   -- Display the memory as simple text, only useful for copying it basically
   local range = range or 143
@@ -547,7 +607,7 @@ function w.drawMemory(mem, address, bytes, range)
   else error ("")
   end
   
-  local addressPtr, value, address = w.validateAddress(mem,address,ct)
+  local addressPtr, value, address = w.validateAddress(address,ct)
   local text = ''
   
   for i=0,range,1 do
@@ -570,14 +630,14 @@ function w.drawMemory(mem, address, bytes, range)
 end
 
 
-function w.drawInputInt(mem, address, name, ct, step, isReversed, width )
+function w.drawInputInt(address, name, ct, step, isReversed, width )
   
   -- isReversed = true in the few cases in which the logic is reversed
   local step = step or 1
   local width = width or 100
   imgui.SetNextItemWidth(width);
   
-  local addressPtr, value = w.validateAddress(mem,address,ct)
+  local addressPtr, value = w.validateAddress(address,ct)
   local changed, value  = imgui.InputInt(name, value, step)
   
   if changed then
@@ -587,11 +647,11 @@ function w.drawInputInt(mem, address, name, ct, step, isReversed, width )
 end
 
 
-function w.drawDrag(mem, address, name, ct, min, max, speed )
+function w.drawDrag( address, name, ct, min, max, speed )
   
   -- it needs AlwaysClamp otherwise it updates the values as soon you start typing
   local speed = speed or 1
-  local addressPtr, value = w.validateAddress(mem,address,ct)
+  local addressPtr, value = w.validateAddress(address,ct)
   local changed, value  = imgui.DragInt(name, value, speed, min, max, '%d', imgui.constant.SliderFlags.AlwaysClamp)
   
   if changed then
@@ -601,10 +661,10 @@ function w.drawDrag(mem, address, name, ct, min, max, speed )
 end
 
 
-function w.drawRadio(mem, address, name )
+function w.drawRadio( address, name )
   
   -- display a bunch of radio buttons in case you want to visually debug a single nibble
-  local addressPtr, value = w.validateAddress(mem,address,'uint8_t*')
+  local addressPtr, value = w.validateAddress(address,'uint8_t*')
   local nibble = bit.band( value , 0x0f )  -- better than using math.fmod(value,16) ?
   imgui.SeparatorText(name)
   imgui.NewLine()
@@ -624,9 +684,9 @@ function w.drawJumpButton(address)
 
   -- display button to jump to the address at the Memory Editor
   imgui.SameLine();
-    if imgui.Button( '>##' .. address ) then
-       PCSX.GUI.jumpToMemory(address,4)
-    end
+  if imgui.Button( '>##' .. address ) then
+     PCSX.GUI.jumpToMemory(address,4)
+  end
 
   if imgui.IsItemHovered(imgui.constant.HoveredFlags.ForTooltip) and imgui.BeginTooltip() then
       imgui.TextUnformatted('Jump to memory');
@@ -636,17 +696,17 @@ function w.drawJumpButton(address)
 end
 
 
-function w.drawInputText(mem, address, name, size, width)
+function w.drawInputText(address, name, size, width)
   
   -- Last input is used as hint, otherwise it is read from memory
-  local hint = w[address] or w.decode(mem,address,size,text_t)
+  local hint = w[address] or w.decode(address,size,text_t)
   local width = width or 200
   imgui.SetNextItemWidth(width)
   
-  local changed, value = imgui.extra.InputText(name, hint, imgui.constant.InputTextFlags.EnterReturnsTrue)
+  local changedText, value = imgui.extra.InputText(name, hint, imgui.constant.InputTextFlags.EnterReturnsTrue)
 
-  if changed then
-    w.insert_string(mem,address,size,text_t,value)
+  if changedText then
+    w.insert_string(address,size,text_t,value)
     w[address] = string.sub(value,1,size-1)
   end
 
@@ -667,7 +727,7 @@ function w.drawSaveButton(saveName)
     local file = Support.File.open(saveName, 'TRUNCATE')
     if not file:failed() then
       file:writeMoveSlice(save)
-      print('Saved file' .. saveName)
+      print('Saved file ' .. saveName)
     end
     file:close()
   end
@@ -687,6 +747,55 @@ function w.drawLoadButton(saveName)
   end
 
 end
+
+
+function w.listFiles(extension,directory)
+  
+  -- if extension is not set, it will only list files without extension
+  if not w.isEmpty(extension) then extension =  '%.' .. extension .. '%d*$' else extension = '^[^.]+$' end
+  directory = directory or lfs.currentdir()
+  
+  local files = {}
+  for file in lfs.dir(directory) do
+    filePath = directory .. "/" .. file
+    local attr = lfs.attributes(filePath)
+    
+    if file:match(extension) and attr.mode == "file" then
+      table.insert(files, file)
+    end
+  end
+  
+  return files
+end
+
+
+
+local saveExtension   = ''
+local saveDirectory   = lfs.currentdir()
+local saveName        = ''
+local saveInt         = 0
+
+function w.DrawLoadSave()
+
+  imgui.SeparatorText("Directory:")
+  changedDir, saveDirectory = imgui.extra.InputText('Save Directory', saveDirectory )
+  
+  imgui.SeparatorText("Saving:")
+  if changedDir then lfs.chdir(saveDirectory) end
+  _, saveName = imgui.extra.InputText('##Save file', saveName )
+  imgui.SameLine(); w.drawSaveButton(saveName)
+
+  imgui.SeparatorText("Loading:")
+  imgui.SetNextItemWidth(60)
+  
+  changedSaved, saveExtension = imgui.extra.InputText('File Extension', saveExtension, w.textFlags )
+  if changedSaved then saveInt = 0 end
+  
+  _, saveInt = imgui.Combo('##Load file', saveInt, w.comboList( w.listFiles(saveExtension) ) )
+  imgui.SameLine(); w.drawLoadButton( w.listFiles(saveExtension)[saveInt+1] )
+
+end
+
 
 
 return w
