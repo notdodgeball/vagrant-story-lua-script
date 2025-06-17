@@ -327,6 +327,31 @@ end )
 -- Breakpoint functions
 --========================================================
 
+function w.addBpOpcode(address, width, id, condition)
+  
+  -- only breaks if the opcode is equal the given parameter
+  -- declared using the id parameter
+  assert( not w[id] , id .. ' already defined.')
+  
+  w[id] = PCSX.addBreakpoint(address, 'Read', width, id , function()
+    
+    local regs = PCSX.getRegisters()
+    local pc = regs.pc
+      
+    local pc_ptr, value = w.validateAddress(pc,'uint32_t*')
+      
+    local opcode = bit.rshift(value , 26)
+
+    if opcode == condition then
+        pprint('opcode ' .. w.dec2hex(opcode) .. ' at ' .. w.dec2hex(address) ); PCSX.pauseEmulator(); PCSX.GUI.jumpToPC(pc)
+    end
+    
+    --PCSX.pauseEmulator(); PCSX.GUI.jumpToPC(pc) 
+    
+  end)
+end
+
+
 function w.addBpWrittenAs(address, width, id, condition)
   
   -- only breaks if the value being written is equal the given parameter
