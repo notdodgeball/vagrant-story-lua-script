@@ -1,7 +1,7 @@
 # vagrant-story-lua-script
 A script to be used with the [PCSX-Redux emulator](https://pcsx-redux.consoledev.net/) for the game Vagrant Story.
 
-It can display and edit values like Ashley's speed and coordinates, insert and read text from memory, modify the inventory, load any room, freeze memory addresses and output text on top of the screen.
+It can display and edit values like enemies and Ashley's stats and coordinates, insert strings into memory, modify the inventory, load any room, freeze memory addresses and output text on top of the screen. It also has a custom lua memory display and saveStates manager.
 
 ## Summary
 
@@ -9,8 +9,11 @@ __vg.lua__ is the main file and the one executed by the emulator.
 
 __map.lua__ contains the area and text encoding info for the game.
 
-__widgets.lua__ implements several support functions and some imgui helpers:
+__widgets.lua__ implements several support functions, including some imgui helpers:
 * drawFreezeCheck
+* drawFrozen
+* drawMemory
+* drawColorPicker
 * drawCheckbox
 * drawSlider
 * drawMemory
@@ -21,13 +24,15 @@ __widgets.lua__ implements several support functions and some imgui helpers:
 * drawInputText
 * drawSaveButton
 * drawLoadButton
+* drawLoadSave
 
 __gui.lua__ implements the output process, and some helpers:
 * drawRectangle
 * text
+* textBox
 * addmessage
 
-__out.lua__ is the file to replace the content of output.lua to enable drawing into the screen.
+__out.lua__ is the file to replace the content of the original output.lua to enable drawing into the screen.
 
 Showcase video of older version:
 [![Showcase video](https://i3.ytimg.com/vi/Wyxv00NZJdc/maxresdefault.jpg)](https://youtu.be/Wyxv00NZJdc)

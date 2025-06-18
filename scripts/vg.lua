@@ -5,9 +5,9 @@
 
 -- jit.off()
 
+require 'map'
 gui = require 'gui'
 w   = require 'widgets'
-require 'map'
 
 local function reload()
   PCSX.pauseEmulator()
@@ -91,7 +91,7 @@ function DrawImguiFrame()
     
     -- if imgui.CollapsingHeader("Header") then
       if imgui.Button(w.vblankCtr) then w.vblankCtr = 0 end
-      if imgui.Button("Reload") then reload() end
+      if imgui.Button("Reload scripts") then reload() end
     -- end
     
     imgui.safe.BeginTabBar('MainTabBar', w.tabFlags, function()

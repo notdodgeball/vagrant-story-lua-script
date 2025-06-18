@@ -314,7 +314,6 @@ end )
 
 
 --- A simple cycle counter, it's printed to console when the emulator is paused
---- needs commit 4869d306391c6889adfa4a00c4e80dad4006d938 (pull request #1559)
 w.cycleCtr = 0
 
 eventPauseCtr = PCSX.Events.createEventListener('ExecutionFlow::Pause', function()
@@ -345,8 +344,6 @@ function w.addBpOpcode(address, width, id, condition)
     if opcode == condition then
         pprint('opcode ' .. w.dec2hex(opcode) .. ' at ' .. w.dec2hex(address) ); PCSX.pauseEmulator(); PCSX.GUI.jumpToPC(pc)
     end
-    
-    --PCSX.pauseEmulator(); PCSX.GUI.jumpToPC(pc) 
     
   end)
 end
