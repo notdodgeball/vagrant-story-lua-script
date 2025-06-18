@@ -5,16 +5,18 @@
 
 -- jit.off()
 
+local itialDir          = lfs.currentdir()
+
 require 'map'
 gui = require 'gui'
 w   = require 'widgets'
 
 local function reload()
   PCSX.pauseEmulator()
-  lfs.chdir(w.initialDir)
-  package.loaded['gui'] = nil
+  lfs.chdir(itialDir)
+  package.loaded['gui']     = nil
   package.loaded['widgets'] = nil
-  package.loaded['map'] = nil
+  package.loaded['map']     = nil
   dofile('vg.lua')
 end
 
@@ -80,6 +82,7 @@ local actorPointerPtr = ffi.cast('uint32_t*', mem +  bit.band(actorPointer, 0x1f
 local actors          = {actorPointerPtr}
 
 local colors1        = {r=0,g=0,b=0}
+local colors2        = {r=0,g=0,b=0,a=0}
 
 --==========-- imgui drawing
 

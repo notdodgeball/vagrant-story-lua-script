@@ -202,9 +202,10 @@ end
 
 function w.backPointer(ptr)
 
-    local a1 = tonumber( ffi.cast('uintptr_t', mem))
-    local a2 = tonumber( ffi.cast('uintptr_t', ptr))
-    return  bit.bor( ffi.cast('uintptr_t', a2 - a1 ) ,0x80000000 )
+    -- returns the pointer's address
+    local base = tonumber( ffi.cast('uintptr_t', mem))
+    local temp = tonumber( ffi.cast('uintptr_t', ptr))
+    return  bit.bor( ffi.cast('uintptr_t', temp - base ) ,0x80000000 )
 
 end
 
@@ -212,7 +213,6 @@ end
 function w.validateAddress(address,ct)
   
   -- main function to deal with pointers
-  
   assert( reflect.typeof(ct).what == 'ptr' , ct .. ' is not a pointer type.' )
   assert( address ~= nil , 'null address call to validateAddress() ' .. ct )
   assert( not ffi.istype(ct, address) , 'already a ' .. ct .. ' pointer' )
@@ -230,7 +230,6 @@ function w.comboList(t)
   -- Formats lua table to be used with imgui.Combo:
   -- c, n = imgui.Combo( "label", n, w.comboList(t) )
   -- remember imgui.Combo return value is 0 indexed
-  
   local list = ''
   for k, v in ipairs(t) do
     list = list .. v .. '\0'
@@ -280,7 +279,6 @@ end
 function w.insert_string(address,size,tbl,text)
   
   -- Inserts string into game memory using the a text table file
-
   local addressPtr = ffi.cast('uint8_t*', mem + bit.band(address, 0x1fffff))
   
   -- Trim down to size
@@ -391,7 +389,7 @@ end
 
 
 
--- Freeze functions
+-- Freeze addresses functions
 --========================================================
 
 w.canFreeze = false
@@ -405,7 +403,7 @@ end
 
 function w.addFreeze(address,ct,value)
   
-  -- Add a address to the frozenAddresses table, value is optional
+  -- Add an address to the frozenAddresses table, can be supplied with a custom value
   local ct = ct or 'uint8_t*'
   local addressPtr, cur_value, address = w.validateAddress(address,ct)
   
@@ -416,22 +414,9 @@ function w.addFreeze(address,ct,value)
 end 
 
 
-function w.doFreeze()
-  
-  -- Does the actual freezing, used like:
-  -- PCSX.Events.createEventListener('GPU::Vsync', w.doFreeze )
-  if w.canFreeze then 
-    for k, v in pairs(w.frozenAddresses) do
-      v[2][0] = v[3] -- pointer[0] = value
-    end
-  end
-end
-
-
 function w.drawFreezeCheckbox(address, name, ct, range)
 
-  -- Freeze checkbox for a specific range
-  -- useful when it's bigger than one byte as it freezes them all
+  -- Freeze checkbox for an address or a range of addresses
   local isFrozen = w.isFrozen(address)
   if not w.canFreeze then imgui.BeginDisabled() end
   local changed, isFrozen = imgui.Checkbox('Freeze##' .. name, isFrozen )
@@ -452,9 +437,10 @@ end
 
 function w.DrawFrozen()
   
-  local function DrawFrozenListBox()
+  -- Controls the whole freezing process, w.canFreeze is exposed here
+  -- draws a text field for adding addresses and a ListBox with the all frozen addresses
   
-    -- Draws a ListBox with the all frozen addresses
+  local function DrawFrozenListBox()
     imgui.safe.BeginListBox('##Frozen', function()
       for k, v in pairs(w.frozenAddresses) do
         if imgui.SmallButton('x##'..k) then w.frozenAddresses[k] = nil end
@@ -482,6 +468,17 @@ function w.DrawFrozen()
   
 end
 
+
+function w.doFreeze()
+  
+  -- Does the actual freezing, used with createEventListener
+  if w.canFreeze then 
+    for k, v in pairs(w.frozenAddresses) do
+      v[2][0] = v[3] -- pointer[0] = value
+    end
+  end
+end
+
 -- Executes doFreeze every frame
 eventVsyncFreeze = PCSX.Events.createEventListener('GPU::Vsync', w.doFreeze )
 
@@ -490,7 +487,7 @@ eventVsyncFreeze = PCSX.Events.createEventListener('GPU::Vsync', w.doFreeze )
 -- Memory functions
 --========================================================
 
-local memWatch        = '80001888'
+local memWatch        = '80000000'
 local memWatchInt     = tonumber(memWatch, 16)
 
 local size_bytes      = 0
@@ -499,6 +496,7 @@ local size_bytes_t    = {8,16}
 
 function w.DrawMemory()
 
+  -- custom memory display for better vizualization and copying
   changedMen, memWatch = imgui.extra.InputText('Add address', memWatch , w.hexFlags)
 
   if changedMen then
@@ -506,17 +504,60 @@ function w.DrawMemory()
   end
   
   imgui.SetNextItemWidth(150)
-  local _, size_bytes = imgui.Combo("##size_bytes", size_bytes, w.comboList( size_bytes_t ) )
+  
+  -- Cant't make it local because of size_bytes
+  _temp, size_bytes = imgui.Combo("##size_bytes", size_bytes, w.comboList( size_bytes_t ) )
   w.drawMemory(memWatchInt,size_bytes + 1)
   
 end
-        
+
+
+function w.drawMemory(address, bytes, range)
+  
+  local range = range or 143
+  local bytes = bytes or 0
+  local ct = ''
+  local formato = ''
+  
+  if bytes == 1 then 
+    ct = 'uint8_t*'
+    formato = '%02X'
+  elseif bytes == 2 then
+    ct = 'uint16_t*'
+    formato = '%04X'
+  else error ("")
+  end
+  
+  local addressPtr, value, address = w.validateAddress(address,ct)
+  local text = ''
+  
+  for i=0,range,1 do
+    if math.fmod(i,16) == 0 then text = text .. '\n' .. w.dec2hex(address + 8*i*bytes, '%08X') .. ': ' end
+    text =  text .. w.dec2hex( addressPtr[i] , formato )  .. ' ' 
+  end
+  
+  -- imgui.safe.BeginListBox('Address', function()
+  PCSX.GUI.useMonoFont()
+  imgui.TextUnformatted( text )
+  imgui.PopFont()
+  -- end)
+  
+  if imgui.Button('Copy')  then
+    imgui.LogToClipboard()
+    imgui.extra.logText(text)
+    imgui.LogFinish()
+  end
+  
+end
+
+
+
 -- Color functions
 --========================================================
 
 function w.ColorToNVG(acolors, alpha)
   
-  -- color table to NVGcolor struct
+  -- converts color table to NVGcolor struct
   if acolors == nil or w.isArrayAllZeros(acolors) then
     acolors = {r = 0, g = 1, b = 0}
   end
@@ -574,7 +615,7 @@ w.fontsize = imgui.GetFontSize()
 
 function w.drawCheckbox(address, name, valueOn, valueOff, isReadOnly)
   
-  -- display only checkbox if isReadOnly is true, in which case valueOff is not even used
+  -- display checkbox, if isReadOnly is true valueOff is not even used
   local addressPtr, value = w.validateAddress(address,'uint8_t*')
   
   local check
@@ -607,46 +648,6 @@ function w.drawSlider(address, name, ct, min, max, range)
     for i=0,range,1 do
       addressPtr[i] = value
     end
-  end
-  
-end
-
-
-function w.drawMemory(address, bytes, range)
-  
-  -- Display the memory as simple text, only useful for copying it basically
-  local range = range or 143
-  local bytes = bytes or 0
-  local ct = ''
-  local formato = ''
-  
-  if bytes == 1 then 
-    ct = 'uint8_t*'
-    formato = '%02X'
-  elseif bytes == 2 then
-    ct = 'uint16_t*'
-    formato = '%04X'
-  else error ("")
-  end
-  
-  local addressPtr, value, address = w.validateAddress(address,ct)
-  local text = ''
-  
-  for i=0,range,1 do
-    if math.fmod(i,16) == 0 then text = text .. '\n' .. w.dec2hex(address + 8*i*bytes, '%08X') .. ': ' end
-    text =  text .. w.dec2hex( addressPtr[i] , formato )  .. ' ' 
-  end
-  
-  -- imgui.safe.BeginListBox('Address', function()
-  PCSX.GUI.useMonoFont()
-  imgui.TextUnformatted( text )
-  imgui.PopFont()
-  -- end)
-  
-  if imgui.Button('Copy')  then
-    imgui.LogToClipboard()
-    imgui.extra.logText(text)
-    imgui.LogFinish()
   end
   
 end
@@ -759,16 +760,25 @@ end
 
 function w.drawLoadButton(saveName)
 
+  function formatAsKB(num)
+    local kbValue = num / 1000
+    return string.format("%d KB", kbValue)
+  end
+    
   if imgui.Button('Load') and not w.isEmpty(saveName) then
     
     local file = Support.File.open(saveName, 'READ')
-    -- if its compressed
-    if saveExtension == 'sstate' then file = Support.File.zReader(file) end
+    local size = file:size()
+    
+    -- if its compressed, decompress it
+    -- for now, this will do
+    if size < 5000000 then file = Support.File.zReader(file) end
     
     if not file:failed() then
       PCSX.loadSaveState(file)
-      print('Loaded file ' .. saveName)
+      print('Loaded file ' .. saveName .. ' - ' .. formatAsKB(size))
     end
+    
     file:close()
   end
 
@@ -777,6 +787,7 @@ end
 
 function w.listFiles(extension,directory)
   
+  -- Lists files in a directory that match a given file extension or lack one entirely, if no extension is passed
   -- if extension is not set, it will only list files without extension
   if not w.isEmpty(extension) then extension =  '%.' .. extension .. '%d*$' else extension = '^[^.]+$' end
   directory = directory or lfs.currentdir()
@@ -795,26 +806,24 @@ function w.listFiles(extension,directory)
 end
 
 
-
-saveExtension         = ''
-w.initialDir          = lfs.currentdir()
-local saveDirectory   = lfs.currentdir()
+saveExtension         = 'sstate'
+w.saveDirectory       = lfs.currentdir() -- '%APPDATA%\\pcsx-redux' 
 local saveName        = ''
 local saveInt         = 0
 
 function w.DrawLoadSave()
 
+  -- Display and loads savestates create by PCSX.createSaveState()
   imgui.SeparatorText("Directory:")
-  changedDir, saveDirectory = imgui.extra.InputText('Save Directory', saveDirectory )
+  changedDir, w.saveDirectory = imgui.extra.InputText('##Save Directory', w.saveDirectory )
+  if changedDir then lfs.chdir(w.saveDirectory) end
   
   imgui.SeparatorText("Saving:")
-  if changedDir then lfs.chdir(saveDirectory) end
   _, saveName = imgui.extra.InputText('##Save file', saveName )
   imgui.SameLine(); w.drawSaveButton(saveName)
 
   imgui.SeparatorText("Loading:")
   imgui.SetNextItemWidth(60)
-  
   changedSaved, saveExtension = imgui.extra.InputText('File Extension', saveExtension, w.textFlags )
   if changedSaved then saveInt = 0 end
   
