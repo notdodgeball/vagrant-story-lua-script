@@ -190,6 +190,12 @@ function w.dec2hex(num, format)
 end
 
 
+function w.hex2num(hexStr)
+  -- hex string to number
+    return tonumber(hexStr, 16)
+end
+
+
 function w.isValidAddress(n)
   return ( n > 0x80000000 and n < 0x80200000 ) -- or (n > 0 and n < 0x00200000)
 end
@@ -321,6 +327,32 @@ end )
 
 
 
+-- Assembly functions
+--========================================================
+
+bit.extract = function(x, n, w) 
+  return bit.rshift(bit.band(x, bit.lshift(1, w) - 1), n)
+end
+
+local getOpcode = function(code) return bit.extract(code, 26, 6) end  --bit.rshift(value , 26)
+
+--J-Type
+local getRt     = function(code) return bit.extract(code, 0, 26) end
+
+--I-Type
+local getRs     = function(code) return bit.extract(code, 21, 5) end
+local getRt     = function(code) return bit.extract(code, 16, 5) end  -- bit.band( bit.rshift(value , 16), 0x1f )
+local getImm    = function(code) return bit.extract(code, 0, 16) end
+
+--R-Type
+local getRs1    = function(code) return bit.extract(code, 20,5) end
+local getRs2    = function(code) return bit.extract(code, 15,5) end
+local getRd     = function(code) return bit.extract(code, 10,5) end
+local getZero   = function(code) return bit.extract(code, 5, 5) end
+local getFunc   = function(code) return bit.extract(code, 0, 5) end
+
+
+
 -- Breakpoint functions
 --========================================================
 
@@ -337,7 +369,7 @@ function w.addBpOpcode(address, width, id, condition)
       
     local pc_ptr, value = w.validateAddress(pc,'uint32_t*')
       
-    local opcode = bit.rshift(value , 26)
+    local opcode = getOpcode(value)
 
     if opcode == condition then
         pprint('opcode ' .. w.dec2hex(opcode) .. ' at ' .. w.dec2hex(address) ); PCSX.pauseEmulator(); PCSX.GUI.jumpToPC(pc)
@@ -385,6 +417,22 @@ function w.addBpNotReadAt(address, width, id, condition)
     end
     
   end)
+end
+
+
+function w.addBreakpointTable(bTable,width,id,bType)
+
+  -- for adding breakpoints in bulk
+  assert( not w[id] , id .. ' already defined.')
+  
+  w[id] = {}
+
+  for k, v in ipairs(bTable) do
+    w[id][k] = PCSX.addBreakpoint(w.hex2num(v[1]), bType, width, v[2] , function()
+      PCSX.pauseEmulator();
+    end)
+  end
+
 end
 
 
@@ -459,7 +507,7 @@ function w.DrawFrozen()
   local changedFre, freezeValue = imgui.extra.InputText('Add address', '' , w.hexFlags )
   
   if changedFre and not w.isEmpty(freezeValue) then
-    local freezeNumber = tonumber(freezeValue, 16)
+    local freezeNumber = w.hex2num(freezeValue)
     w.addFreeze(freezeNumber)
   end
   
@@ -488,7 +536,7 @@ eventVsyncFreeze = PCSX.Events.createEventListener('GPU::Vsync', w.doFreeze )
 --========================================================
 
 local memWatch        = '80000000'
-local memWatchInt     = tonumber(memWatch, 16)
+local memWatchInt     = w.hex2num(memWatch)
 
 local size_bytes      = 0
 local size_bytes_t    = {8,16}
@@ -500,7 +548,7 @@ function w.DrawMemory()
   changedMen, memWatch = imgui.extra.InputText('Add address', memWatch , w.hexFlags)
 
   if changedMen then
-    memWatchInt = tonumber(memWatch, 16)
+    memWatchInt = w.hex2num(memWatch)
   end
   
   imgui.SetNextItemWidth(150)
@@ -738,6 +786,86 @@ function w.drawInputText(address, name, size, width)
 end
 
 
+-- File manipulation functions
+--========================================================
+
+function w.listFiles(extension,directory)
+  
+  -- Lists files in a directory that match a given file extension or lack one entirely if no extension is passed
+  if not w.isEmpty(extension) then extension =  '%.' .. extension .. '%d*$' else extension = '^[^.]+$' end
+  directory = directory or lfs.currentdir()
+  
+  local files = {}
+  for file in lfs.dir(directory) do
+    filePath = directory .. "/" .. file
+    local attr = lfs.attributes(filePath)
+    
+    if file:match(extension) and attr.mode == "file" then
+      table.insert(files, file)
+    end
+  end
+  
+  return files
+end
+
+
+function w.readFileAsString(filename)
+  
+  --Open a file and return its content
+  local file = Support.File.open(filename, 'READ')
+
+  if not file:failed() then
+    local buffer = file:read(file:size())
+    file:close()
+    return tostring(buffer)
+  end
+end
+
+
+function w.parseFileAsTable(filename,separator)
+
+  -- Parse a file like a csv, can be used as input for w.addBreakpointTable
+  local fileData = w.readFileAsString(filename)
+  
+  local tableData = {}
+  local separator = separator or ' '
+  for line in fileData:gmatch("[^\r\n]+") do
+    local fields = {}
+    string.gsub(line, '([^'..separator..']+)', function(x) table.insert(fields, x) end)
+    table.insert(tableData, fields)
+  end
+  
+  return tableData
+
+end
+
+
+function w.parseFileAsTable2(filename,separator)
+
+  -- same as parseFileAsTable, but uses the I/O library and its lines() method
+  local file = io.open(filename, "r")
+  
+  if not file then
+    print("Error opening file: " .. filename)
+    return nil
+  end
+
+  local tableData = {}
+  local separator = separator or ' '
+
+  for line in file:lines() do
+    if line:match("%S") then
+      local fields = {}
+      string.gsub(line, '([^'..separator..']+)', function(c) table.insert(fields, c) end)
+      table.insert(tableData, fields)
+    end
+  end
+  
+  file:close()
+  return tableData
+end
+
+
 
 -- Save state functions
 -- these two below save and load uncompressed files and therefore are incompatible with saves created from the pcsx interface
@@ -785,27 +913,6 @@ function w.drawLoadButton(saveName)
 end
 
 
-function w.listFiles(extension,directory)
-  
-  -- Lists files in a directory that match a given file extension or lack one entirely, if no extension is passed
-  -- if extension is not set, it will only list files without extension
-  if not w.isEmpty(extension) then extension =  '%.' .. extension .. '%d*$' else extension = '^[^.]+$' end
-  directory = directory or lfs.currentdir()
-  
-  local files = {}
-  for file in lfs.dir(directory) do
-    filePath = directory .. "/" .. file
-    local attr = lfs.attributes(filePath)
-    
-    if file:match(extension) and attr.mode == "file" then
-      table.insert(files, file)
-    end
-  end
-  
-  return files
-end
-
-
 saveExtension         = 'sstate'
 w.saveDirectory       = lfs.currentdir() -- '%APPDATA%\\pcsx-redux' 
 local saveName        = ''
@@ -832,6 +939,32 @@ function w.DrawLoadSave()
 
 end
 
+
+function w.fromCSV(s)
+  s = s .. ' '        -- ending comma
+  local t = {}        -- table to collect fields
+  local fieldstart = 1
+  repeat
+    -- next field is quoted? (start with `"'?)
+    if string.find(s, '^"', fieldstart) then
+      local a, c
+      local i  = fieldstart
+      repeat
+        -- find closing quote
+        a, i, c = string.find(s, '"("?)', i+1)
+      until c ~= '"'    -- quote not followed by quote?
+      if not i then error('unmatched "') end
+      local f = string.sub(s, fieldstart+1, i-1)
+      table.insert(t, (string.gsub(f, '""', '"')))
+      fieldstart = string.find(s, ',', i) + 1
+    else                -- unquoted; find next comma
+      local nexti = string.find(s, ',', fieldstart)
+      table.insert(t, string.sub(s, fieldstart, nexti-1))
+      fieldstart = nexti + 1
+    end
+  until fieldstart > string.len(s)
+  return t
+end
 
 
 return w
