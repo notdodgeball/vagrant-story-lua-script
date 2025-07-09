@@ -436,6 +436,11 @@ function w.addBreakpointTable(bTable,width,id,bType)
 end
 
 
+function w.addSymbolTable(sTable)
+  for k, v in ipairs(sTable) do
+    PCSX.insertSymbol(w.hex2num(v[1]),v[2])
+  end
+end
 
 -- Freeze addresses functions
 --========================================================
