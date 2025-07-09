@@ -603,21 +603,6 @@ end
 -- Color functions
 --========================================================
 
-function w.ColorToNVG(acolors, alpha)
-  
-  -- converts color table to NVGcolor struct
-  if acolors == nil or w.isArrayAllZeros(acolors) then
-    acolors = {r = 0, g = 1, b = 0}
-  end
-  
-  alpha = alpha or 200
-
-  return  nvg.transRGBA( nvg.Color.New(acolors.r, acolors.g, acolors.b) , alpha)
-  -- return nvg.Color.New(acolors.r, acolors.g, acolors.b, alpha)
-  -- return nvg.RGBA(colors.r* 255, colors.g* 255, colors.b* 255, colors.a* 255)
-end
-
-
 local function rgbTableToHex(colorTable)
   
   --  math.ceil or floor won't work
@@ -635,8 +620,8 @@ function w.drawColorPicker3(label,colors)
   if w[label] then
     imgui.SetNextItemWidth(150)
     _, colors = imgui.extra.ColorPicker3(label,colors,ColorPickerFlags)
+    if _ then print(rgbTableToHex(colors)) end
   end
-  
   return colors
 end
 
@@ -648,6 +633,7 @@ function w.drawColorPicker4(label,colors)
   if w[label] then
     imgui.SetNextItemWidth(150)
     _,colors = imgui.extra.ColorPicker4(label,colors,ColorPickerFlags)
+    if _ then print(rgbTableToHex(colors)) end
   end
   
   return colors
@@ -937,33 +923,6 @@ function w.DrawLoadSave()
   _, saveInt = imgui.Combo('##Load file', saveInt, w.comboList( w.listFiles(saveExtension) ) )
   imgui.SameLine(); w.drawLoadButton( w.listFiles(saveExtension)[saveInt+1] )
 
-end
-
-
-function w.fromCSV(s)
-  s = s .. ' '        -- ending comma
-  local t = {}        -- table to collect fields
-  local fieldstart = 1
-  repeat
-    -- next field is quoted? (start with `"'?)
-    if string.find(s, '^"', fieldstart) then
-      local a, c
-      local i  = fieldstart
-      repeat
-        -- find closing quote
-        a, i, c = string.find(s, '"("?)', i+1)
-      until c ~= '"'    -- quote not followed by quote?
-      if not i then error('unmatched "') end
-      local f = string.sub(s, fieldstart+1, i-1)
-      table.insert(t, (string.gsub(f, '""', '"')))
-      fieldstart = string.find(s, ',', i) + 1
-    else                -- unquoted; find next comma
-      local nexti = string.find(s, ',', fieldstart)
-      table.insert(t, string.sub(s, fieldstart, nexti-1))
-      fieldstart = nexti + 1
-    end
-  until fieldstart > string.len(s)
-  return t
 end
 
 

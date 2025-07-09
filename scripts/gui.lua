@@ -3,17 +3,17 @@
 -- made by optrin
 --========================================================
 
--- setOutput() expects a function as a parameter
 -- The logic flow: 
 -- setOutput() => setScale() => draw()
 -- the nvg context is only avaiable at nvg.queueNvgRender
 
+-- nvg:fillColor(nvg.Color.New(255,0,0))
+-- nvg:textAlign( nvg.ALIGN_LEFT | nvg.ALIGN_MIDDLE)
+-- nvg:textBreakLines
+-- nvg:textBoxBounds returns [xmin,ymin,xmax,ymax]
 
-  -- TODO:
-  -- nvg:fillColor(nvg.Color.New(255,0,0))
-  -- nvg:textAlign( nvg.ALIGN_LEFT | nvg.ALIGN_MIDDLE)
-  -- is given as string "0xrrggbbaa" (hex) or as a string name (e.g. "red"). 
-  -- nvg:textBreakLines
+-- TODO:
+-- color given as number "0xrrggbbaa" or as a string (e.g. "red")
 
 
 local g = {}
@@ -84,25 +84,27 @@ function g.setScale(dstSizeX,dstSizeY,cx,cy)
 
 end
 
-g.existsFont = false
+
+g.fontLoaded = false
 g.fontFileName = 'fonts\\SpaceMono-Regular.ttf'
 
 function g.setFont()
 
   -- createFont() has no error handling, we use File.open() for that
-  -- yes, fontFace() needs to be called every frame
-  
-  -- 'not g.fontFile' so to try to read the file only once
-  if not g.existsFont and not g.fontFile then
+  -- fontFace() needs to be called every frame
+
+  if not g.fontFile then
     g.fontFile = Support.File.open(g.fontFileName, 'READ')
     
     if not g.fontFile:failed() then 
       nvg:createFont('myfont', g.fontFileName)
-      g.existsFont = true
+      g.fontLoaded = true
     end
+    
+    g.fontFile:close()
   end
   
-  if g.existsFont then
+  if g.fontLoaded then
     nvg:fontFace('myfont')
   end
   
@@ -111,11 +113,26 @@ function g.setFont()
 end
 
 
+function g.ColorToNVG(acolors, alpha)
+  
+  -- converts color table to a NVGcolor struct
+  if acolors == nil then -- or w.isArrayAllZeros(acolors)
+    acolors = {r = 0, g = 1, b = 0}
+  end
+  
+  local alpha = alpha or 200
+
+  return  nvg.transRGBA( nvg.Color.New(acolors.r, acolors.g, acolors.b) , alpha)
+  -- return nvg.Color.New(acolors.r, acolors.g, acolors.b, alpha)
+  -- return nvg.RGBA(colors.r* 255, colors.g* 255, colors.b* 255, colors.a* 255)
+end
+
+
 function g.drawRectangle(x, y, width, height, strokeWidth, colors)
   
   -- equivalent to bizhawk gui.drawRectangle
   
-  if not ffi.istype('NVGcolor', colors) then colors = w.ColorToNVG(colors, alpha) end
+  if not ffi.istype('NVGcolor', colors) then colors = g.ColorToNVG(colors) end
   
   nvg:beginPath()
   nvg:rect(x, y, width, height)
@@ -129,55 +146,32 @@ end
 function g.text(x,y,text,colors)
 
   -- equivalent to bizhawk gui.text
-    nvg:text( g.minX + x, g.minY + y, tostring(text) )
+  nvg:text( g.minX + x, g.minY + y, tostring(text) )
 
 end
 
 
-function g.textBox(x,y,text,width,colors)
+function g.textBox(x,y,text,colors,maxWidth)
 
   -- gui.text within a box
-    nvg:textBox( g.minX + x, g.minY + y, width, tostring(text) )
-    -- nvg:textBoxBounds returns [xmin,ymin, xmax,ymax]
-    local a = nvg:textBoxBounds(g.minX + x, g.minY + y, width, tostring(text))
+  local maxWidth = maxWidth or 9999
 
-    g.drawRectangle( a[0], a[1], a[2] - a[0] , a[3] - a[1] , 2 , colors)
+  nvg:textBox( g.minX + x, g.minY + y, maxWidth, tostring(text) )
+  local a = nvg:textBoxBounds(g.minX + x, g.minY + y, maxWidth, tostring(text))
+
+  g.drawRectangle( a[0], a[1], a[2] - a[0] , a[3] - a[1] , 2 , colors)
 
 end
 
 
-function g.addmessage(t,colors)
+function g.addmessage(t,colors,maxWidth)
 
   -- prints into the screen left size, can be called multiple times at the same cycle.
   -- equivalent to bizhawk gui.addmessage
-  
-  if not g.isOutputSet then return end
-
-  if type(t) == 'string' or type(t) == 'number' then
-      nvg:text(g.minX, g.minY + ( g.lineHeight * g.offset ), t )
-      g.offset = g.offset + 1
-  elseif type(t) == 'table' then
-    for i,v in ipairs(t) do
-      nvg:text(g.minX, g.minY + ( g.lineHeight*( g.offset+i-1) ), tostring(v) )
-    end
-      g.offset = g.offset + #t
-  else
-    error("wrong argument to addmessage()")
-  end
-  
-  g.drawRectangle(g.minX - 3, g.minY - 0.7*g.lineHeight, 150*g.scaleX, 3 + ( g.offset * (g.lineHeight) ), 2, colors)
-end
-
-
-function g.addmessage2(t,colors)
-
-  -- prints into the screen left size, can be called multiple times at the same cycle.
-  -- equivalent to bizhawk gui.addmessage
-  
-  if not g.isOutputSet then return end
   
   output = ''
-
+  local maxWidth = maxWidth or 9999
+  
   if type(t) == 'string' or type(t) == 'number' then
     output = output .. '\n' .. t
   elseif type(t) == 'table' then
@@ -188,11 +182,14 @@ function g.addmessage2(t,colors)
     error("wrong argument to addmessage()")
   end
   
-  nvg:textBox( g.minX, g.minY , g.dstSizeY, tostring(output) )
-  -- nvg:textBoxBounds returns [xmin,ymin, xmax,ymax]
-  local a = nvg:textBoxBounds(g.minX , g.minY , g.dstSizeY, tostring(output))
-
-  g.drawRectangle( a[0], a[1], a[2] - a[0] , a[3] - a[1] , 2, colors)
+  nvg:textBox( g.minX, g.minY + g.offset, maxWidth, tostring(output) )
+  local a = nvg:textBoxBounds(g.minX , g.minY , maxWidth, tostring(output))
+  
+  if colors ~= nil then
+    g.drawRectangle( a[0], a[1] + g.offset, a[2] - a[0] , a[3] - a[1] , 2, colors)
+  end
+  
+  g.offset = g.offset + a[3] - a[1]
 
 end
 
