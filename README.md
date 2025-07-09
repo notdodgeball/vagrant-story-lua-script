@@ -68,7 +68,7 @@ gui.setOutput(
 function DrawImguiFrame()
   
   imgui.safe.Begin('Command', true, function()
-    w.drawSlider(PCSX.getMemPtr(),  0x80000000, 'Something', 'uint8_t*', 0, 0xFF)
+    w.drawSlider(0x80000000, 'Something', 'uint8_t*', 0, 0xFF)
   end)
 
 end
