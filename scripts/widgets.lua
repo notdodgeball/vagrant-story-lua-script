@@ -56,7 +56,7 @@ function w.rngTable(seedPtr,size,current)
 
     for i=1, size do
     
-      if i < current and (mismatch or newRNG == 0)  -- When no seed has yet been calculated or a mismatch
+      if i < current and (mismatch or newRNG == 0)      -- When no seed has yet been calculated or a mismatch
         then w.RNGs[i] = 0
       elseif i == current
         then w.RNGs[i] = newRNG
@@ -126,6 +126,24 @@ end
 
 -- Helpers functions
 --========================================================
+
+-- Save the original print
+local _originalPrint = print
+
+function print(value)
+  
+-- Define a custom hex-print function
+  if type(value) == 'number' then
+    _originalPrint('0x' .. w.dec2hex(value))
+  elseif type(value) == 'table' then
+    for k, v in pairs(value) do
+      _originalPrint(tostring(k) .. ' = ' .. ( type(v) == 'number' and '0x' .. w.dec2hex(v) or tostring(v) ) )
+    end
+  else
+    _originalPrint(value)
+  end
+end
+
 
 -- ctSize_t[ct] will return the size of ct in bytes
 -- ffi.sizeof doesn't work with pointers because all pointers are 8 byte long in a 64 bit system 
@@ -221,7 +239,7 @@ function w.validateAddress(address,ct)
   -- main function to deal with pointers
   assert( reflect.typeof(ct).what == 'ptr' , ct .. ' is not a pointer type.' )
   assert( address ~= nil , 'null address call to validateAddress() ' .. ct )
-  assert( not ffi.istype(ct, address) , 'already a ' .. ct .. ' pointer' )
+  assert( not ffi.istype(ct, address) , w.dec2hex(w.backPointer(address)) .. ' already a ' .. ct .. ' pointer' )
 
   local addressPtr
   address = bit.band(address, 0x1fffff)
@@ -428,6 +446,8 @@ function w.addBreakpointTable(bTable,width,id,bType)
   w[id] = {}
 
   for k, v in ipairs(bTable) do
+    PCSX.insertSymbol(w.hex2num(v[1]),v[2])
+    
     w[id][k] = PCSX.addBreakpoint(w.hex2num(v[1]), bType, width, v[2] , function()
       PCSX.pauseEmulator();
     end)
@@ -815,7 +835,7 @@ end
 
 function w.parseFileAsTable(filename,separator)
 
-  -- Parse a file like a csv, can be used as input for w.addBreakpointTable
+  -- Parse a file like a csv, can and should be used as input for w.addBreakpointTable
   local fileData = w.readFileAsString(filename)
   
   local tableData = {}
