@@ -900,8 +900,7 @@ end
 function w.drawLoadButton(saveName)
 
   function formatAsKB(num)
-    local kbValue = num / 1000
-    return string.format("%d KB", kbValue)
+    return string.format("%.1f KB", num / 1000)
   end
     
   if imgui.Button('Load') and not w.isEmpty(saveName) then
